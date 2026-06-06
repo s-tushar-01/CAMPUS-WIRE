@@ -20,8 +20,9 @@ export default function GoogleAuthSuccess() {
 
     localStorage.setItem('token', token);
 
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const response = await fetch(`${apiUrl}/api/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -38,7 +39,7 @@ export default function GoogleAuthSuccess() {
         navigate('/', { replace: true });
       } catch (err) {
         if (!active) return;
-        setError(err.message || 'Could not complete Google sign in.');
+        setError(`${err.message || 'Could not complete Google sign in.'} API: ${apiUrl}`);
       }
     }
 
