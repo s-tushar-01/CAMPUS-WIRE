@@ -20,6 +20,7 @@ require('./config/passport');
 
 const app = express();
 const httpServer = http.createServer(app);
+const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Connect to MongoDB
 connectDB();
@@ -29,7 +30,7 @@ initSocket(httpServer);
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: clientUrl,
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
