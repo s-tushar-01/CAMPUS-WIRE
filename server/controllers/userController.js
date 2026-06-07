@@ -8,8 +8,8 @@ const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
       .select('-password')
-      .populate('followers', '_id name profilePic')
-      .populate('following', '_id name profilePic');
+      .populate('followers', '_id name profilePic bio')
+      .populate('following', '_id name profilePic bio');
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });

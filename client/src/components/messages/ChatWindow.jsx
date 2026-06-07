@@ -1,5 +1,6 @@
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'timeago.js';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -65,14 +66,17 @@ export default function ChatWindow({ activeUser, onBack }) {
         <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 md:hidden" onClick={onBack} aria-label="Back to conversations">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="relative">
+        <Link to={`/profile/${activeUser._id}`} className="relative">
           <Avatar user={activeUser} />
           {onlineUsers.has(activeUser._id) && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-success dark:border-slate-900" />}
-        </div>
-        <div>
-          <h2 className="font-bold">{activeUser.name}</h2>
+        </Link>
+        <div className="min-w-0 flex-1">
+          <Link to={`/profile/${activeUser._id}`} className="block truncate font-bold hover:text-primary">{activeUser.name}</Link>
           <p className="text-xs text-slate-500">{onlineUsers.has(activeUser._id) ? 'Online' : 'Offline'}</p>
         </div>
+        <Link to={`/profile/${activeUser._id}`} className="focus-ring hidden h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 sm:inline-flex" aria-label={`View ${activeUser.name}'s profile`}>
+          <UserRound className="h-4 w-4" />
+        </Link>
       </header>
       <div className="flex-1 space-y-3 overflow-auto p-4">
         {messages.map((message) => {

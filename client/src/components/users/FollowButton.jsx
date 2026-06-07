@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UserPlus, UserCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
@@ -8,6 +8,10 @@ import { unwrapApi } from '../../lib/utils';
 export default function FollowButton({ userId, initialFollowing = false, onChange, size = 'sm' }) {
   const [following, setFollowing] = useState(initialFollowing);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setFollowing(initialFollowing);
+  }, [initialFollowing, userId]);
 
   const toggle = async () => {
     setBusy(true);
