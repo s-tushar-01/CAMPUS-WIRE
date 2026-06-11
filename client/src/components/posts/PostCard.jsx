@@ -40,6 +40,11 @@ const audienceLabels = {
   private: 'Only me',
 };
 
+function mentionFor(user) {
+  const name = user?.name || 'Member';
+  return `@${name.trim().replace(/\s+/g, '')}`;
+}
+
 export default function PostCard({ post, onDelete, onUpdated, onShared }) {
   const { user } = useAuth();
   const [local, setLocal] = useState(post);
@@ -117,7 +122,11 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
     event.preventDefault();
     if (!replyText.trim()) return;
     try {
-      const { data } = await api.post(`/api/posts/${local._id}/comment/${commentId}/reply`, { text: replyText.trim() });
+      const commentItem = (local.comments || []).find((item) => item._id === commentId);
+      const mention = mentionFor(commentItem?.user);
+      const trimmed = replyText.trim();
+      const text = trimmed.startsWith(mention) ? trimmed : `${mention} ${trimmed}`;
+      const { data } = await api.post(`/api/posts/${local._id}/comment/${commentId}/reply`, { text });
       const next = { ...local, comments: data.comments };
       setLocal(next);
       setReplyText('');
@@ -256,8 +265,11 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
                         </div>
                         <div className="mt-1 flex items-center gap-3 px-2 text-xs font-semibold text-slate-500">
                           <button className="hover:text-primary" onClick={() => {
-                            setReplyingTo((current) => current === item._id ? '' : item._id);
-                            setReplyText('');
+                            setReplyingTo((current) => {
+                              const opening = current !== item._id;
+                              setReplyText(opening ? `${mentionFor(item.user)} ` : '');
+                              return opening ? item._id : '';
+                            });
                           }}>
                             Reply
                           </button>
@@ -297,7 +309,7 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
                     )}
                     {replyingTo === item._id && (
                       <form onSubmit={(event) => addReply(event, item._id)} className="ml-10 flex gap-2">
-                        <Input value={replyText} onChange={(event) => setReplyText(event.target.value.slice(0, 500))} placeholder={`Reply to ${item.user?.name || 'comment'}`} />
+                        <Input value={replyText} onChange={(event) => setReplyText(event.target.value.slice(0, 500))} placeholder={`Reply to ${mentionFor(item.user)}`} />
                         <Button type="submit" disabled={!replyText.trim()}>Reply</Button>
                       </form>
                     )}
