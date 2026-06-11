@@ -16,6 +16,10 @@ function usernameBase(name = '', email = '') {
   return (fromName || fromEmail || 'campus_user').slice(0, 24);
 }
 
+function reservationModel() {
+  return mongoose.models.UsernameReservation || require('./UsernameReservation');
+}
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -98,8 +102,17 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('validate', async function (next) {
   try {
+    const UsernameReservation = reservationModel();
+
     if (this.username) {
       this.username = normalizeUsername(this.username);
+    }
+
+    if (this.username) {
+      const reserved = await UsernameReservation.findOne({ username: this.username });
+      if (reserved && reserved.user.toString() !== this._id.toString()) {
+        return next(new Error('Username has already been used'));
+      }
     }
 
     if (!this.username) {
@@ -108,7 +121,10 @@ userSchema.pre('validate', async function (next) {
       let candidate = base.length >= 3 ? base : `${base}_cw`;
       let suffix = 1;
 
-      while (await User.exists({ username: candidate, _id: { $ne: this._id } })) {
+      while (
+        await User.exists({ username: candidate, _id: { $ne: this._id } }) ||
+        await UsernameReservation.exists({ username: candidate, user: { $ne: this._id } })
+      ) {
         const trimmedBase = base.slice(0, Math.max(3, 30 - String(suffix).length - 1));
         candidate = `${trimmedBase}_${suffix}`;
         suffix += 1;
@@ -117,6 +133,22 @@ userSchema.pre('validate', async function (next) {
       this.username = candidate;
     }
 
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+userSchema.post('save', async function (doc, next) {
+  try {
+    if (doc.username) {
+      const UsernameReservation = reservationModel();
+      await UsernameReservation.updateOne(
+        { username: doc.username },
+        { $setOnInsert: { username: doc.username, user: doc._id } },
+        { upsert: true }
+      );
+    }
     next();
   } catch (error) {
     next(error);

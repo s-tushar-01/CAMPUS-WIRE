@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const UsernameReservation = require('../models/UsernameReservation');
 
 // Helper: sign JWT
 const signToken = (id, role) =>
@@ -39,9 +40,12 @@ const register = async (req, res, next) => {
 
     const normalizedUsername = username ? User.normalizeUsername(username) : '';
     if (normalizedUsername) {
-      const existingUsername = await User.findOne({ username: normalizedUsername });
-      if (existingUsername) {
-        return res.status(400).json({ success: false, message: 'Username already taken' });
+      const [existingUsername, reservedUsername] = await Promise.all([
+        User.findOne({ username: normalizedUsername }),
+        UsernameReservation.findOne({ username: normalizedUsername }),
+      ]);
+      if (existingUsername || reservedUsername) {
+        return res.status(400).json({ success: false, message: 'Username has already been used' });
       }
     }
 

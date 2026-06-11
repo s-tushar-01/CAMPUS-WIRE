@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const UsernameReservation = require('../models/UsernameReservation');
 const { cloudinary } = require('../middleware/upload');
 const mongoose = require('mongoose');
 
@@ -44,9 +45,12 @@ const updateProfile = async (req, res, next) => {
       if (!username || username.length < 3 || username.length > 30) {
         return res.status(400).json({ success: false, message: 'Username must be 3 to 30 characters' });
       }
-      const existing = await User.findOne({ username, _id: { $ne: user._id } });
-      if (existing) {
-        return res.status(400).json({ success: false, message: 'Username already taken' });
+      const [existing, reserved] = await Promise.all([
+        User.findOne({ username, _id: { $ne: user._id } }),
+        UsernameReservation.findOne({ username, user: { $ne: user._id } }),
+      ]);
+      if (existing || reserved) {
+        return res.status(400).json({ success: false, message: 'Username has already been used' });
       }
       user.username = username;
     }
