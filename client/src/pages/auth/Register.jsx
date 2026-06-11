@@ -47,6 +47,7 @@ export default function Register() {
         <FieldError>{errors.password?.message}</FieldError>
         <label className="block text-sm font-semibold">I am a<Select className="mt-1" {...register('roleLabel')}><option>Student</option><option>Faculty</option><option>Other</option></Select></label>
         <Button className="w-full" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'Create account'}</Button>
+        <Button className="w-full" variant="outline" onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`; }}>Continue with Google</Button>
       </form>
     </AuthShell>
   );
