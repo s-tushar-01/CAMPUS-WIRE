@@ -18,7 +18,7 @@ const getDashboardStats = async (req, res, next) => {
         Message.countDocuments(),
         User.countDocuments({ createdAt: { $gte: todayStart } }),
         Post.countDocuments({ createdAt: { $gte: todayStart } }),
-        User.find().sort({ createdAt: -1 }).limit(5).select('name email createdAt profilePic role'),
+        User.find().sort({ createdAt: -1 }).limit(5).select('name username email createdAt profilePic role'),
       ]);
 
     res.json({
@@ -42,7 +42,7 @@ const getAllUsers = async (req, res, next) => {
     const query = {};
     if (req.query.search) {
       const regex = new RegExp(req.query.search, 'i');
-      query.$or = [{ name: regex }, { email: regex }];
+      query.$or = [{ name: regex }, { username: regex }, { email: regex }];
     }
     if (req.query.role && ['participant', 'admin'].includes(req.query.role)) {
       query.role = req.query.role;
@@ -53,7 +53,7 @@ const getAllUsers = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('_id name email role isActive createdAt profilePic');
+      .select('_id name username email role isActive createdAt profilePic');
 
     res.json({
       success: true,
@@ -145,7 +145,7 @@ const getAllPosts = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('author', '_id name profilePic email');
+      .populate('author', '_id name username profilePic email');
 
     res.json({
       success: true,
@@ -204,7 +204,7 @@ const sendBroadcast = async (req, res, next) => {
 
     await Notification.insertMany(notifications);
 
-    const populated = await post.populate('author', '_id name profilePic role');
+    const populated = await post.populate('author', '_id name username profilePic role');
     res.status(201).json({ success: true, post: populated });
   } catch (error) {
     next(error);

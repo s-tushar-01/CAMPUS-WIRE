@@ -1,15 +1,20 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { cloudinary } = require('../middleware/upload');
+const mongoose = require('mongoose');
 
 // @route   GET /api/users/:id
 // @access  Protected
 const getUserProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id)
+    const profileQuery = mongoose.Types.ObjectId.isValid(req.params.id)
+      ? { _id: req.params.id }
+      : { username: User.normalizeUsername(req.params.id) };
+
+    const user = await User.findOne(profileQuery)
       .select('-password')
-      .populate('followers', '_id name profilePic bio')
-      .populate('following', '_id name profilePic bio');
+      .populate('followers', '_id name username profilePic bio')
+      .populate('following', '_id name username profilePic bio');
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -34,6 +39,17 @@ const updateProfile = async (req, res, next) => {
 
     // Update text fields
     if (req.body.name) user.name = req.body.name;
+    if (req.body.username !== undefined) {
+      const username = User.normalizeUsername(req.body.username);
+      if (!username || username.length < 3 || username.length > 30) {
+        return res.status(400).json({ success: false, message: 'Username must be 3 to 30 characters' });
+      }
+      const existing = await User.findOne({ username, _id: { $ne: user._id } });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Username already taken' });
+      }
+      user.username = username;
+    }
     if (req.body.bio !== undefined) user.bio = req.body.bio;
 
     // Handle profile pic upload
@@ -136,10 +152,10 @@ const searchUsers = async (req, res, next) => {
     const users = await User.find({
       $and: [
         { _id: { $ne: req.user._id } },
-        { $or: [{ name: regex }, { email: regex }] },
+        { $or: [{ name: regex }, { username: regex }, { email: regex }] },
       ],
     })
-      .select('_id name email profilePic bio')
+      .select('_id name username email profilePic bio')
       .limit(20);
 
     res.json({ success: true, users });
@@ -156,7 +172,7 @@ const getSuggestions = async (req, res, next) => {
     const excludeIds = [...currentUser.following, req.user._id];
 
     const users = await User.find({ _id: { $nin: excludeIds } })
-      .select('_id name profilePic bio')
+      .select('_id name username profilePic bio')
       .limit(5);
 
     res.json({ success: true, users });

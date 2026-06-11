@@ -7,7 +7,7 @@ const getNotifications = async (req, res, next) => {
     const notifications = await Notification.find({ recipient: req.user._id })
       .sort({ createdAt: -1 })
       .limit(30)
-      .populate('sender', '_id name profilePic')
+      .populate('sender', '_id name username profilePic')
       .populate('post', '_id content');
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;

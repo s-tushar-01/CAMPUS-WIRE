@@ -40,6 +40,8 @@ export default function Register() {
       <form className="space-y-4" onSubmit={syncAndSubmit}>
         <label className="block text-sm font-semibold">Name<Input className="mt-1" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Use at least 2 characters' } })} /></label>
         <FieldError>{errors.name?.message}</FieldError>
+        <label className="block text-sm font-semibold">Username<Input className="mt-1" placeholder="campus_user" {...register('username', { minLength: { value: 3, message: 'Use at least 3 characters' }, maxLength: { value: 30, message: 'Use 30 characters or less' }, pattern: { value: /^[a-zA-Z0-9_]+$/, message: 'Only letters, numbers, and underscores' } })} /></label>
+        <FieldError>{errors.username?.message}</FieldError>
         <label className="block text-sm font-semibold">Email<Input className="mt-1" type="email" {...register('email', { required: 'Email is required' })} /></label>
         <FieldError>{errors.email?.message}</FieldError>
         <label className="block text-sm font-semibold">Password<Input className="mt-1" type="password" {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Use at least 6 characters' } })} /></label>

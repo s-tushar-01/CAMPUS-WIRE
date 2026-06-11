@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { useAuth } from './AuthContext';
+import { displayName, usernameHandle } from '../lib/utils';
 
 const SocketContext = createContext(null);
 
@@ -25,7 +26,7 @@ export function SocketProvider({ children }) {
     nextSocket.on('users:online', (users) => setOnlineUsers(new Set(users)));
     nextSocket.on('message:receive', (message) => {
       setIncomingMessage(message);
-      toast.info(`New message from ${message.sender?.name || 'CampusWire'}`);
+      toast.info(`New message from ${usernameHandle(message.sender) || displayName(message.sender, 'CampusWire')}`);
     });
     nextSocket.on('message:sent', (message) => setOutgoingMessage(message));
     nextSocket.on('message:error', (error) => toast.error(error?.message || 'Message failed'));

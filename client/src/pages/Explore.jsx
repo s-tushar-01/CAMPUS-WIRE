@@ -9,7 +9,7 @@ import Badge from '../components/ui/Badge';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Form';
 import FollowButton from '../components/users/FollowButton';
-import { imageUrl } from '../lib/utils';
+import { displayName, imageUrl, profilePath, usernameHandle } from '../lib/utils';
 
 export default function Explore() {
   const [query, setQuery] = useState('');
@@ -102,13 +102,14 @@ export default function Explore() {
 
 function ProfileBubble({ user }) {
   return (
-    <Link to={`/profile/${user._id}`} className="group flex w-24 shrink-0 flex-col items-center gap-2 text-center">
+    <Link to={profilePath(user)} className="group flex w-24 shrink-0 flex-col items-center gap-2 text-center">
       <span className="rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-primary p-[2px]">
         <span className="block rounded-full bg-white p-0.5 dark:bg-slate-950">
           <Avatar user={user} size="lg" />
         </span>
       </span>
-      <span className="line-clamp-2 text-xs font-bold leading-4 group-hover:text-primary">{user.name}</span>
+      <span className="line-clamp-1 text-xs font-bold leading-4 group-hover:text-primary">{displayName(user, 'Member')}</span>
+      {usernameHandle(user) && <span className="line-clamp-1 text-[11px] font-semibold text-slate-500">{usernameHandle(user)}</span>}
     </Link>
   );
 }
@@ -117,10 +118,10 @@ function SearchResult({ user }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-3">
-        <Link to={`/profile/${user._id}`}><Avatar user={user} /></Link>
+        <Link to={profilePath(user)}><Avatar user={user} /></Link>
         <div className="min-w-0 flex-1">
-          <Link to={`/profile/${user._id}`} className="block truncate text-sm font-bold hover:text-primary">{user.name}</Link>
-          <p className="truncate text-xs text-slate-500">{user.bio || user.email || 'Campus member'}</p>
+          <Link to={profilePath(user)} className="block truncate text-sm font-bold hover:text-primary">{displayName(user, 'Member')}</Link>
+          <p className="truncate text-xs text-slate-500">{usernameHandle(user) || user.bio || user.email || 'Campus member'}</p>
         </div>
         <FollowButton userId={user._id} />
       </CardContent>
@@ -135,7 +136,7 @@ function ExploreTile({ post, featured }) {
 
   return (
     <Link
-      to={`/profile/${post.author?._id}`}
+      to={profilePath(post.author)}
       className={`group relative overflow-hidden rounded-md bg-slate-100 dark:bg-slate-900 ${featured ? 'col-span-2 row-span-2' : ''}`}
     >
       <div className="aspect-square h-full w-full">
@@ -146,7 +147,7 @@ function ExploreTile({ post, featured }) {
             <p className="line-clamp-6 text-sm font-bold leading-5 text-slate-700 dark:text-slate-100">{post.content || 'CampusWire post'}</p>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <Avatar user={post.author} size="sm" />
-              <span className="truncate">{post.author?.name}</span>
+              <span className="truncate">{usernameHandle(post.author) || displayName(post.author, 'Member')}</span>
             </div>
           </div>
         )}
@@ -154,7 +155,7 @@ function ExploreTile({ post, featured }) {
       <div className="absolute inset-0 flex flex-col justify-between bg-slate-950/0 p-3 text-white opacity-0 transition group-hover:bg-slate-950/55 group-hover:opacity-100">
         <div className="flex items-center gap-2 text-xs font-semibold">
           <Avatar user={post.author} size="sm" />
-          <span className="truncate">{post.author?.name || 'Member'}</span>
+          <span className="truncate">{usernameHandle(post.author) || displayName(post.author, 'Member')}</span>
         </div>
         <div>
           <div className="flex items-center justify-center gap-5 text-sm font-bold">

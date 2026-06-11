@@ -30,6 +30,10 @@ const protect = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Your account has been deactivated' });
     }
 
+    if (!user.username) {
+      await user.save();
+    }
+
     req.user = user;
     next();
   } catch (error) {

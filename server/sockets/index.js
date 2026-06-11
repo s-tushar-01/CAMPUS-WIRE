@@ -48,7 +48,7 @@ const initSocket = (httpServer) => {
           receiver: receiverId,
           content: content.trim(),
         });
-        await message.populate('sender', '_id name profilePic');
+        await message.populate('sender', '_id name username profilePic');
 
         const receiverSocketId = onlineUsers.get(receiverId.toString());
         if (receiverSocketId) {

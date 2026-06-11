@@ -1,20 +1,22 @@
 const Post = require('../models/Post');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 const { cloudinary } = require('../middleware/upload');
+const mongoose = require('mongoose');
 
 const REACTION_TYPES = ['like', 'love', 'celebrate', 'helpful', 'curious'];
 const AUDIENCES = ['campus', 'followers', 'friends', 'private'];
 
 const postPopulate = [
-  { path: 'author', select: '_id name profilePic role' },
-  { path: 'comments.user', select: '_id name profilePic' },
-  { path: 'comments.replies.user', select: '_id name profilePic' },
+  { path: 'author', select: '_id name username profilePic role' },
+  { path: 'comments.user', select: '_id name username profilePic' },
+  { path: 'comments.replies.user', select: '_id name username profilePic' },
   {
     path: 'shareOf',
     populate: [
-      { path: 'author', select: '_id name profilePic role' },
-      { path: 'comments.user', select: '_id name profilePic' },
-      { path: 'comments.replies.user', select: '_id name profilePic' },
+      { path: 'author', select: '_id name username profilePic role' },
+      { path: 'comments.user', select: '_id name username profilePic' },
+      { path: 'comments.replies.user', select: '_id name username profilePic' },
     ],
   },
 ];
@@ -94,7 +96,7 @@ const createPost = async (req, res, next) => {
     }
 
     const post = await Post.create(postData);
-    const populated = await post.populate('author', '_id name profilePic role');
+    const populated = await post.populate('author', '_id name username profilePic role');
 
     res.status(201).json({ success: true, post: populated });
   } catch (error) {
@@ -154,11 +156,18 @@ const getUserPosts = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    const ownProfile = req.params.userId === req.user._id.toString();
+    const profileUser = mongoose.Types.ObjectId.isValid(req.params.userId)
+      ? await User.findById(req.params.userId).select('_id')
+      : await User.findOne({ username: User.normalizeUsername(req.params.userId) }).select('_id');
+
+    if (!profileUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const profileUserId = profileUser._id;
+    const ownProfile = profileUserId.toString() === req.user._id.toString();
     const audienceQuery = ownProfile
-      ? { author: req.params.userId }
+      ? { author: profileUserId }
       : {
-          author: req.params.userId,
+          author: profileUserId,
           $or: [
             { audience: 'campus' },
             { isBroadcast: true },
@@ -327,8 +336,8 @@ const addComment = async (req, res, next) => {
       });
     }
 
-    await post.populate('comments.user', '_id name profilePic');
-    await post.populate('comments.replies.user', '_id name profilePic');
+    await post.populate('comments.user', '_id name username profilePic');
+    await post.populate('comments.replies.user', '_id name username profilePic');
     res.json({ success: true, comments: post.comments });
   } catch (error) {
     next(error);
@@ -370,8 +379,8 @@ const addReply = async (req, res, next) => {
       message: 'replied',
     })));
 
-    await post.populate('comments.user', '_id name profilePic');
-    await post.populate('comments.replies.user', '_id name profilePic');
+    await post.populate('comments.user', '_id name username profilePic');
+    await post.populate('comments.replies.user', '_id name username profilePic');
     res.status(201).json({ success: true, comments: post.comments });
   } catch (error) {
     next(error);
@@ -430,8 +439,8 @@ const deleteReply = async (req, res, next) => {
     comment.replies.pull({ _id: req.params.replyId });
     await post.save();
 
-    await post.populate('comments.user', '_id name profilePic');
-    await post.populate('comments.replies.user', '_id name profilePic');
+    await post.populate('comments.user', '_id name username profilePic');
+    await post.populate('comments.replies.user', '_id name username profilePic');
     res.json({ success: true, comments: post.comments });
   } catch (error) {
     next(error);

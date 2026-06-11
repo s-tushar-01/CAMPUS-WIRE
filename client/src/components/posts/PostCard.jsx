@@ -23,7 +23,7 @@ import Button from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Input, Select, Textarea } from '../ui/Form';
 import Modal from '../ui/Modal';
-import { imageUrl, unwrapApi } from '../../lib/utils';
+import { displayName, imageUrl, profilePath, unwrapApi, usernameHandle } from '../../lib/utils';
 
 const REACTIONS = [
   { type: 'like', label: 'Like', icon: ThumbsUp, className: 'text-primary' },
@@ -41,8 +41,7 @@ const audienceLabels = {
 };
 
 function mentionFor(user) {
-  const name = user?.name || 'Member';
-  return `@${name.trim().replace(/\s+/g, '')}`;
+  return usernameHandle(user) || `@${displayName(user, 'Member').trim().replace(/\s+/g, '')}`;
 }
 
 export default function PostCard({ post, onDelete, onUpdated, onShared }) {
@@ -182,10 +181,10 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
       <Card className="overflow-hidden">
         <CardContent className="space-y-4">
           <div className="flex items-start gap-3">
-            <Link to={`/profile/${local.author?._id}`}><Avatar user={local.author} /></Link>
+            <Link to={profilePath(local.author)}><Avatar user={local.author} /></Link>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <Link to={`/profile/${local.author?._id}`} className="font-bold hover:text-primary">{local.author?.name || 'CampusWire user'}</Link>
+                <Link to={profilePath(local.author)} className="font-bold hover:text-primary">{displayName(local.author)}</Link>
                 {local.author?.role === 'admin' && <Badge>Admin</Badge>}
                 {local.isBroadcast && <Badge variant="warning">Announcement</Badge>}
                 {local.shareOf && <Badge variant="muted"><Repeat2 className="h-3 w-3" /> Shared</Badge>}
@@ -193,6 +192,7 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
               <p className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
                 {format(local.createdAt)}
                 <span aria-hidden="true">.</span>
+                {usernameHandle(local.author) && <>{usernameHandle(local.author)}<span aria-hidden="true">.</span></>}
                 <Eye className="h-3 w-3" />
                 {audienceLabels[local.audience] || 'Campus'}
               </p>
@@ -252,7 +252,8 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
                         <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="font-semibold">{item.user?.name || 'Member'}</p>
+                              <p className="font-semibold">{displayName(item.user, 'Member')}</p>
+                              {usernameHandle(item.user) && <p className="text-xs font-semibold text-primary">{usernameHandle(item.user)}</p>}
                               <p className="text-xs text-slate-500">{format(item.createdAt)}</p>
                             </div>
                             {canDeleteComment && (
@@ -291,7 +292,8 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
                               <div className="min-w-0 flex-1 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
-                                    <p className="font-semibold">{reply.user?.name || 'Member'}</p>
+                                    <p className="font-semibold">{displayName(reply.user, 'Member')}</p>
+                                    {usernameHandle(reply.user) && <p className="text-xs font-semibold text-primary">{usernameHandle(reply.user)}</p>}
                                     <p className="text-xs text-slate-500">{format(reply.createdAt)}</p>
                                   </div>
                                   {canDeleteReply && (
@@ -372,7 +374,8 @@ function SharedPostPreview({ post, compact = false }) {
       <div className="flex items-center gap-2 px-3 py-2">
         <Avatar user={post.author} size="sm" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold">{post.author?.name || 'CampusWire user'}</p>
+          <p className="truncate text-sm font-bold">{displayName(post.author)}</p>
+          {usernameHandle(post.author) && <p className="truncate text-xs font-semibold text-primary">{usernameHandle(post.author)}</p>}
           <p className="text-xs text-slate-500">{post.createdAt ? format(post.createdAt) : 'Original post'}</p>
         </div>
       </div>

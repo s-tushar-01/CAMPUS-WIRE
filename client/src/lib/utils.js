@@ -18,6 +18,19 @@ export function initials(name = 'CampusWire') {
     .join('');
 }
 
+export function usernameHandle(user) {
+  if (!user?.username) return '';
+  return `@${user.username}`;
+}
+
+export function displayName(user, fallback = 'CampusWire user') {
+  return user?.name || user?.username || fallback;
+}
+
+export function profilePath(user) {
+  return `/profile/${user?.username || user?._id}`;
+}
+
 export function unwrapApi(error) {
   return error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error.message || 'Something went wrong';
 }

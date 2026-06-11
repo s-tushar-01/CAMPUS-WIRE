@@ -7,6 +7,7 @@ import AppShell from '../components/layout/AppShell';
 import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { displayName, profilePath, usernameHandle } from '../lib/utils';
 
 export default function Notifications() {
   const [items, setItems] = useState([]);
@@ -28,7 +29,7 @@ export default function Notifications() {
         </CardHeader>
         <CardContent className="space-y-3">
           {items.map((item) => (
-            <Link key={item._id} to={item.type === 'follow' ? `/profile/${item.sender?._id}` : '/'} className="flex gap-3 rounded-lg border border-slate-200/70 p-3 transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900">
+            <Link key={item._id} to={item.type === 'follow' ? profilePath(item.sender) : '/'} className="flex gap-3 rounded-lg border border-slate-200/70 p-3 transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900">
               {item.type === 'broadcast' ? <div className="grid h-10 w-10 place-items-center rounded-full bg-amber-100 text-amber-700"><Megaphone className="h-5 w-5" /></div> : <Avatar user={item.sender} />}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{label(item)}</p>
@@ -45,15 +46,16 @@ export default function Notifications() {
 }
 
 function label(item) {
+  const sender = usernameHandle(item.sender) || displayName(item.sender, 'Someone');
   if (item.type === 'broadcast') return `Announcement: ${item.message || 'New campus announcement'}`;
-  if (item.type === 'like') return `${item.sender?.name || 'Someone'} liked your post`;
-  if (item.type === 'reaction') return `${item.sender?.name || 'Someone'} reacted to your post`;
-  if (item.type === 'comment') return `${item.sender?.name || 'Someone'} commented on your post`;
-  if (item.type === 'share') return `${item.sender?.name || 'Someone'} shared your post`;
-  if (item.type === 'follow') return `${item.sender?.name || 'Someone'} started following you`;
-  if (item.type === 'friend_request') return `${item.sender?.name || 'Someone'} sent you a friend request`;
-  if (item.type === 'friend_accept') return `${item.sender?.name || 'Someone'} accepted your friend request`;
-  if (item.type === 'group_invite') return `${item.sender?.name || 'Someone'} invited you to a group`;
-  if (item.type === 'event_invite') return `${item.sender?.name || 'Someone'} invited you to an event`;
+  if (item.type === 'like') return `${sender} liked your post`;
+  if (item.type === 'reaction') return `${sender} reacted to your post`;
+  if (item.type === 'comment') return `${sender} commented on your post`;
+  if (item.type === 'share') return `${sender} shared your post`;
+  if (item.type === 'follow') return `${sender} started following you`;
+  if (item.type === 'friend_request') return `${sender} sent you a friend request`;
+  if (item.type === 'friend_accept') return `${sender} accepted your friend request`;
+  if (item.type === 'group_invite') return `${sender} invited you to a group`;
+  if (item.type === 'event_invite') return `${sender} invited you to an event`;
   return 'New notification';
 }

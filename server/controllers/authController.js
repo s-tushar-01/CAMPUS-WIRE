@@ -30,14 +30,22 @@ const register = async (req, res, next) => {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, password, username } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    const user = await User.create({ name, email, password, role: 'participant' });
+    const normalizedUsername = username ? User.normalizeUsername(username) : '';
+    if (normalizedUsername) {
+      const existingUsername = await User.findOne({ username: normalizedUsername });
+      if (existingUsername) {
+        return res.status(400).json({ success: false, message: 'Username already taken' });
+      }
+    }
+
+    const user = await User.create({ name, email, username: normalizedUsername, password, role: 'participant' });
 
     const token = signToken(user._id, user.role);
     res.status(201).json({
@@ -46,6 +54,7 @@ const register = async (req, res, next) => {
       user: {
         _id: user._id,
         name: user.name,
+        username: user.username,
         email: user.email,
         role: user.role,
         profilePic: user.profilePic,
@@ -89,6 +98,10 @@ const login = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    if (!user.username) {
+      await user.save();
+    }
+
     const token = signToken(user._id, user.role);
     res.json({
       success: true,
@@ -96,6 +109,7 @@ const login = async (req, res, next) => {
       user: {
         _id: user._id,
         name: user.name,
+        username: user.username,
         email: user.email,
         role: user.role,
         profilePic: user.profilePic,

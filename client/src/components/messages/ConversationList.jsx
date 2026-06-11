@@ -3,6 +3,7 @@ import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import { format } from 'timeago.js';
+import { displayName, usernameHandle } from '../../lib/utils';
 
 export default function ConversationList({ conversations, activeId, onBack, onSelect, onlineUsers }) {
   return (
@@ -28,9 +29,10 @@ export default function ConversationList({ conversations, activeId, onBack, onSe
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-bold">{user.name}</p>
+                  <p className="truncate text-sm font-bold">{displayName(user, 'Member')}</p>
                   <span className="text-[11px] text-slate-400">{conversation.lastMessage?.createdAt ? format(conversation.lastMessage.createdAt) : ''}</span>
                 </div>
+                {usernameHandle(user) && <p className="truncate text-xs font-semibold text-primary">{usernameHandle(user)}</p>}
                 <p className="truncate text-xs text-slate-500">{conversation.lastMessage?.content || 'Start a conversation'}</p>
               </div>
               {!!conversation.unreadCount && <Badge>{conversation.unreadCount}</Badge>}

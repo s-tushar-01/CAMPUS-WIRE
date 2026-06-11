@@ -92,6 +92,9 @@ const slugify = (text) =>
     .replace(/[^a-z0-9]+/g, '.')
     .replace(/^\.+|\.+$/g, '');
 
+const usernameFor = (text, index = 0) =>
+  `${slugify(text).replace(/\./g, '_')}${index ? `_${index}` : ''}`.slice(0, 30);
+
 const pick = (items, index) => items[index % items.length];
 
 const minutesAgo = (minutes) => new Date(Date.now() - minutes * 60 * 1000);
@@ -100,6 +103,7 @@ function buildDemoProfiles() {
   const profiles = [
     {
       name: 'CampusWire Office',
+      username: 'campuswire_office',
       email: `campuswire.office@${DEMO_DOMAIN}`,
       role: 'admin',
       bio: 'Official updates, announcements, and campus community highlights.',
@@ -113,6 +117,7 @@ function buildDemoProfiles() {
 
     profiles.push({
       name,
+      username: usernameFor(name, index + 1),
       email: `${slugify(name)}.${index + 1}@${DEMO_DOMAIN}`,
       role: 'participant',
       bio: pick(bios, index),
@@ -163,6 +168,7 @@ async function seedUsers() {
       });
     } else {
       user.name = profile.name;
+      user.username = profile.username;
       user.bio = profile.bio;
       user.role = profile.role;
       user.isActive = true;

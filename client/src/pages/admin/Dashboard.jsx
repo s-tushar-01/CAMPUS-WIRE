@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Avatar from '../../components/ui/Avatar';
 import { Card, CardContent, CardHeader } from '../../components/ui/Card';
+import { usernameHandle } from '../../lib/utils';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -48,7 +49,7 @@ export default function Dashboard() {
           {recentUsers.map((user) => (
             <div key={user._id} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
               <Avatar user={user} />
-              <div className="min-w-0"><p className="truncate font-bold">{user.name}</p><p className="text-sm text-slate-500">{user.email}</p></div>
+              <div className="min-w-0"><p className="truncate font-bold">{user.name}</p>{usernameHandle(user) && <p className="truncate text-sm font-semibold text-primary">{usernameHandle(user)}</p>}<p className="text-sm text-slate-500">{user.email}</p></div>
             </div>
           ))}
         </CardContent>

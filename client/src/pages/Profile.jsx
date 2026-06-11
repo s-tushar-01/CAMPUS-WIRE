@@ -13,7 +13,7 @@ import EditProfileModal from '../components/profile/EditProfileModal';
 import FollowButton from '../components/users/FollowButton';
 import PostCard from '../components/posts/PostCard';
 import Skeleton from '../components/ui/Skeleton';
-import { imageUrl } from '../lib/utils';
+import { imageUrl, profilePath, usernameHandle } from '../lib/utils';
 
 export default function Profile() {
   const { userId } = useParams();
@@ -79,6 +79,7 @@ export default function Profile() {
                     {profile.role === 'admin' && <Badge>Admin</Badge>}
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{profile.bio || 'Campus community member'}</p>
+                  {usernameHandle(profile) && <p className="text-sm font-semibold text-primary">{usernameHandle(profile)}</p>}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -156,10 +157,10 @@ function ConnectionsModal({ open, title, users, currentUserId, onClose }) {
       <div className="space-y-2">
         {users.map((user) => (
           <div key={user._id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-slate-50 dark:hover:bg-slate-900">
-            <Link to={`/profile/${user._id}`} onClick={onClose}><Avatar user={user} /></Link>
+            <Link to={profilePath(user)} onClick={onClose}><Avatar user={user} /></Link>
             <div className="min-w-0 flex-1">
-              <Link to={`/profile/${user._id}`} onClick={onClose} className="block truncate text-sm font-bold hover:text-primary">{user.name}</Link>
-              <p className="truncate text-xs text-slate-500">{user.bio || 'Campus community member'}</p>
+              <Link to={profilePath(user)} onClick={onClose} className="block truncate text-sm font-bold hover:text-primary">{user.name}</Link>
+              <p className="truncate text-xs text-slate-500">{usernameHandle(user) || user.bio || 'Campus community member'}</p>
             </div>
             {currentUserId !== user._id && (
               <Link to={`/messages?userId=${user._id}`} onClick={onClose} className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" aria-label={`Message ${user.name}`}>

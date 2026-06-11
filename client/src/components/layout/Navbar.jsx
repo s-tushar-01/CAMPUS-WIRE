@@ -7,6 +7,7 @@ import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Logo from '../brand/Logo';
+import { profilePath, usernameHandle } from '../../lib/utils';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -61,7 +62,11 @@ export default function Navbar() {
               <Avatar user={user} />
             </button>
             <div className="surface invisible absolute right-0 top-12 w-56 rounded-card p-2 opacity-0 shadow-float transition group-hover:visible group-hover:opacity-100">
-              <Link className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800" to={`/profile/${user._id}`}>
+              <div className="px-3 py-2">
+                <p className="truncate text-sm font-bold">{user.name}</p>
+                {usernameHandle(user) && <p className="truncate text-xs font-semibold text-primary">{usernameHandle(user)}</p>}
+              </div>
+              <Link className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800" to={profilePath(user)}>
                 <UserRound className="h-4 w-4" /> Profile
               </Link>
               {user.role === 'admin' && <Link className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800" to="/admin">Admin Panel</Link>}

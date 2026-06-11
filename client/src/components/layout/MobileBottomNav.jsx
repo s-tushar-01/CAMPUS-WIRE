@@ -1,6 +1,7 @@
 import { Compass, Home, MessageSquare, PlusCircle, UserRound } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { profilePath } from '../../lib/utils';
 
 export default function MobileBottomNav() {
   const { user } = useAuth();
@@ -9,7 +10,7 @@ export default function MobileBottomNav() {
     { to: '/explore', icon: Compass, label: 'Explore' },
     { to: '/', icon: PlusCircle, label: 'Create' },
     { to: '/messages', icon: MessageSquare, label: 'Messages' },
-    { to: `/profile/${user?._id}`, icon: UserRound, label: 'Profile' },
+    { to: profilePath(user), icon: UserRound, label: 'Profile' },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 md:hidden">

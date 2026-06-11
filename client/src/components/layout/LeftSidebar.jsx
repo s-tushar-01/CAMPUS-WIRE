@@ -2,6 +2,7 @@ import { Bell, Compass, Home, MessageSquare, Shield, UserRound } from 'lucide-re
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Avatar from '../ui/Avatar';
+import { profilePath, usernameHandle } from '../../lib/utils';
 
 export default function LeftSidebar() {
   const { user } = useAuth();
@@ -10,7 +11,7 @@ export default function LeftSidebar() {
     { to: '/explore', label: 'Explore', icon: Compass },
     { to: '/messages', label: 'Messages', icon: MessageSquare },
     { to: '/notifications', label: 'Notifications', icon: Bell },
-    { to: `/profile/${user?._id}`, label: 'Profile', icon: UserRound },
+    { to: profilePath(user), label: 'Profile', icon: UserRound },
   ];
   if (user?.role === 'admin') links.push({ to: '/admin', label: 'Admin Panel', icon: Shield });
 
@@ -21,7 +22,7 @@ export default function LeftSidebar() {
           <Avatar user={user} />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold">{user?.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{user?.role === 'admin' ? 'Administrator' : 'Community member'}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{usernameHandle(user) || (user?.role === 'admin' ? 'Administrator' : 'Community member')}</p>
           </div>
         </div>
         <nav className="space-y-1">

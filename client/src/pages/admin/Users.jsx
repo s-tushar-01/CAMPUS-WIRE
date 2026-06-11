@@ -7,7 +7,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader } from '../../components/ui/Card';
 import { Input, Select } from '../../components/ui/Form';
-import { unwrapApi } from '../../lib/utils';
+import { usernameHandle, unwrapApi } from '../../lib/utils';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -57,7 +57,7 @@ export default function Users() {
             <tbody>
               {users.map((user) => (
                 <tr key={user._id} className="border-t border-slate-200 dark:border-slate-800">
-                  <td className="p-3"><div className="flex items-center gap-3"><Avatar user={user} /><div><p className="font-bold">{user.name}</p><p className="text-slate-500">{user.email}</p></div></div></td>
+                  <td className="p-3"><div className="flex items-center gap-3"><Avatar user={user} /><div><p className="font-bold">{user.name}</p><p className="font-semibold text-primary">{usernameHandle(user)}</p><p className="text-slate-500">{user.email}</p></div></div></td>
                   <td className="p-3"><Badge variant={user.role === 'admin' ? 'default' : 'muted'}>{user.role}</Badge></td>
                   <td className="p-3"><Badge variant={user.isActive ? 'success' : 'error'}>{user.isActive ? 'Active' : 'Inactive'}</Badge></td>
                   <td className="p-3 text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>

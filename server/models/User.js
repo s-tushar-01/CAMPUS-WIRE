@@ -1,6 +1,21 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+function normalizeUsername(value = '') {
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/[^a-z0-9_]/g, '');
+}
+
+function usernameBase(name = '', email = '') {
+  const fromName = normalizeUsername(String(name || '').replace(/\s+/g, '_'));
+  const fromEmail = normalizeUsername(String(email || '').split('@')[0]);
+  return (fromName || fromEmail || 'campus_user').slice(0, 24);
+}
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -14,6 +29,16 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
+  },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true,
+    lowercase: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 30,
+    match: [/^[a-z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'],
   },
   password: {
     type: String,
@@ -71,6 +96,33 @@ const userSchema = new mongoose.Schema({
   },
 });
 
+userSchema.pre('validate', async function (next) {
+  try {
+    if (this.username) {
+      this.username = normalizeUsername(this.username);
+    }
+
+    if (!this.username) {
+      const User = this.constructor;
+      const base = usernameBase(this.name, this.email);
+      let candidate = base.length >= 3 ? base : `${base}_cw`;
+      let suffix = 1;
+
+      while (await User.exists({ username: candidate, _id: { $ne: this._id } })) {
+        const trimmedBase = base.slice(0, Math.max(3, 30 - String(suffix).length - 1));
+        candidate = `${trimmedBase}_${suffix}`;
+        suffix += 1;
+      }
+
+      this.username = candidate;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Pre-save hook: hash password only if modified
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
@@ -83,5 +135,7 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+userSchema.statics.normalizeUsername = normalizeUsername;
 
 module.exports = mongoose.model('User', userSchema);
