@@ -1,10 +1,12 @@
 import {
+  Bookmark,
+  Edit3,
   Eye,
+  Flag,
   Heart,
   HelpCircle,
   Lightbulb,
   MessageCircle,
-  MoreHorizontal,
   PartyPopper,
   Repeat2,
   Share2,
@@ -23,6 +25,8 @@ import Button from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Input, Select, Textarea } from '../ui/Form';
 import Modal from '../ui/Modal';
+import ActionMenu from '../ui/ActionMenu';
+import StatusBanner from '../ui/StatusBanner';
 import { displayName, imageUrl, profilePath, unwrapApi, usernameHandle } from '../../lib/utils';
 
 const REACTIONS = [
@@ -55,6 +59,9 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
   const [shareText, setShareText] = useState('');
   const [shareAudience, setShareAudience] = useState('campus');
   const [busyReaction, setBusyReaction] = useState('');
+  const [reporting, setReporting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
   const canDelete = user?._id === local.author?._id || user?.role === 'admin';
 
   const reactionSummary = useMemo(() => {
@@ -197,12 +204,14 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
                 {audienceLabels[local.audience] || 'Campus'}
               </p>
             </div>
-            {canDelete && (
-              <Button variant="ghost" size="icon" onClick={remove} aria-label="Delete post">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-            {!canDelete && <MoreHorizontal className="h-5 w-5 text-slate-400" />}
+            <ActionMenu
+              items={[
+                { label: saved ? 'Saved' : 'Save post', icon: Bookmark, onClick: () => { setSaved(true); toast.info('Saved UI is ready; backend bookmark storage is pending.'); }, disabled: saved },
+                canDelete && { label: 'Edit post', icon: Edit3, onClick: () => setEditing(true) },
+                !canDelete && { label: 'Report post', icon: Flag, onClick: () => setReporting(true) },
+                canDelete && { label: 'Delete post', icon: Trash2, danger: true, onClick: remove },
+              ].filter(Boolean)}
+            />
           </div>
 
           {local.content && <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{local.content}</p>}
@@ -218,7 +227,7 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
 
           <div className="grid grid-cols-3 gap-1 border-t border-slate-200 pt-2 dark:border-slate-800">
             <div className="group relative">
-              <Button variant="ghost" className={myReaction ? activeReaction.className : ''} disabled={!!busyReaction} onClick={() => react(myReaction || 'like')}>
+              <Button variant="ghost" className={myReaction ? `${activeReaction.className} bg-slate-100 dark:bg-slate-800` : ''} disabled={!!busyReaction} onClick={() => react(myReaction || 'like')}>
                 <ActiveIcon className="h-4 w-4" />
                 {myReaction ? activeReaction.label : 'Like'}
               </Button>
@@ -346,6 +355,28 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={reporting} title="Report post" onClose={() => setReporting(false)}>
+        <div className="space-y-4">
+          <StatusBanner tone="warning" title="Moderation UI ready">Report storage and admin review backend are planned as the next API upgrade.</StatusBanner>
+          <Textarea placeholder="Tell moderators what looks wrong" maxLength={500} />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setReporting(false)}>Cancel</Button>
+            <Button disabled onClick={() => setReporting(false)}><Flag className="h-4 w-4" /> Submit report</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={editing} title="Edit post" onClose={() => setEditing(false)}>
+        <div className="space-y-4">
+          <StatusBanner title="Edit shell added">The editor is ready for a future update endpoint. Current post content is shown below.</StatusBanner>
+          <Textarea value={local.content || ''} readOnly />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEditing(false)}>Close</Button>
+            <Button disabled><Edit3 className="h-4 w-4" /> Save edit</Button>
+          </div>
+        </div>
       </Modal>
     </>
   );

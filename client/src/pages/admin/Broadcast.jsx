@@ -7,6 +7,7 @@ import Badge from '../../components/ui/Badge';
 import { Card, CardContent, CardHeader } from '../../components/ui/Card';
 import { Textarea } from '../../components/ui/Form';
 import { unwrapApi } from '../../lib/utils';
+import StatusBanner from '../../components/ui/StatusBanner';
 
 export default function Broadcast() {
   const [content, setContent] = useState('');
@@ -38,7 +39,12 @@ export default function Broadcast() {
         <CardHeader><h1 className="flex items-center gap-2 text-xl font-extrabold"><Megaphone className="h-5 w-5 text-primary" /> Broadcast Center</h1></CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={submit}>
+            <StatusBanner title="Preview before sending">Broadcasts notify every active participant, so review the preview before posting.</StatusBanner>
             <Textarea value={content} onChange={(event) => setContent(event.target.value.slice(0, 2000))} placeholder="Write your campus announcement..." required />
+            <div className="rounded-card border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30">
+              <Badge variant="warning">Announcement preview</Badge>
+              <p className="mt-2 whitespace-pre-wrap text-sm">{content || 'Your announcement preview will appear here.'}</p>
+            </div>
             <div className="flex items-center justify-between"><span className="text-xs text-slate-500">{content.length}/2000</span><Button type="submit" disabled={sending || !content.trim()}><Send className="h-4 w-4" /> Send Broadcast</Button></div>
           </form>
         </CardContent>

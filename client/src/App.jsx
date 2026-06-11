@@ -5,10 +5,13 @@ import ProtectedRoute from './components/routing/ProtectedRoute';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import VerifyRegistration from './pages/auth/VerifyRegistration';
+import ResendVerification from './pages/auth/ResendVerification';
+import AuthError from './pages/auth/AuthError';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import VerifyOtp from './pages/auth/VerifyOtp';
 import ResetPassword from './pages/auth/ResetPassword';
 import GoogleAuthSuccess from './pages/auth/GoogleAuthSuccess';
+import Onboarding from './pages/Onboarding';
 
 import Feed from './pages/Feed';
 import Profile from './pages/Profile';
@@ -35,12 +38,15 @@ export default function App() {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/verify-signup" element={<PublicRoute><VerifyRegistration /></PublicRoute>} />
+      <Route path="/resend-verification" element={<PublicRoute><ResendVerification /></PublicRoute>} />
+      <Route path="/auth/error" element={<PublicRoute><AuthError /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
       <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
       <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 
       <Route path="/" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

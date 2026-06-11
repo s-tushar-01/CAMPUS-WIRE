@@ -1,11 +1,14 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MessageSquarePlus, Users } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import EmptyState from '../ui/EmptyState';
+import Skeleton from '../ui/Skeleton';
+import StatusBanner from '../ui/StatusBanner';
 import { format } from 'timeago.js';
 import { displayName, usernameHandle } from '../../lib/utils';
 
-export default function ConversationList({ conversations, activeId, onBack, onSelect, onlineUsers }) {
+export default function ConversationList({ conversations, activeId, onBack, onSelect, onlineUsers, loading = false }) {
   return (
     <div className="surface h-full rounded-card p-2">
       <div className="flex items-center gap-3 border-b border-slate-200 px-3 py-3 dark:border-slate-800">
@@ -18,6 +21,11 @@ export default function ConversationList({ conversations, activeId, onBack, onSe
         </div>
       </div>
       <div className="mt-2 space-y-1">
+        <div className="px-2 pb-2">
+          <StatusBanner title="Group chats planned">Realtime one-to-one chat is active. Group creation UI is ready for a future backend.</StatusBanner>
+          <Button className="mt-2 w-full" variant="outline" disabled><Users className="h-4 w-4" /> New group</Button>
+        </div>
+        {loading && <div className="space-y-2 p-2"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div>}
         {conversations.map((conversation) => {
           const user = conversation.user;
           const active = activeId === user._id;
@@ -39,7 +47,7 @@ export default function ConversationList({ conversations, activeId, onBack, onSe
             </button>
           );
         })}
-        {!conversations.length && <p className="p-4 text-sm text-slate-500">No conversations yet. Start from a member profile.</p>}
+        {!loading && !conversations.length && <EmptyState icon={MessageSquarePlus} title="No conversations yet" description="Start from a member profile when you want to message someone." />}
       </div>
     </div>
   );

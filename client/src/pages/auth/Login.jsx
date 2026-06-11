@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import { FieldError, Input } from '../../components/ui/Form';
+import StatusBanner from '../../components/ui/StatusBanner';
 import { unwrapApi } from '../../lib/utils';
 import AuthShell from './AuthShell';
 
@@ -14,6 +15,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [show, setShow] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const { register, getValues, setValue, trigger, formState: { errors, isSubmitting } } = useForm();
 
   const submit = async (values) => {
@@ -22,7 +24,13 @@ export default function Login() {
       login(data.token, data.user);
       navigate('/');
     } catch (error) {
-      toast.error(unwrapApi(error));
+      const message = unwrapApi(error);
+      if (message.toLowerCase().includes('verify')) {
+        const email = values.email || '';
+        setUnverifiedEmail(email);
+        sessionStorage.setItem('signupEmail', email);
+      }
+      toast.error(message);
     }
   };
 
@@ -41,6 +49,14 @@ export default function Login() {
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to your private campus community." footer={<span>New here? <Link className="font-semibold text-primary" to="/register">Create an account</Link></span>}>
       <form className="space-y-4" onSubmit={syncAndSubmit}>
+        {unverifiedEmail && (
+          <StatusBanner tone="warning" title="Verify before signing in">
+            <span>We saved {unverifiedEmail}. </span>
+            <Link className="font-bold underline" to="/verify-signup">Enter OTP</Link>
+            <span> or </span>
+            <Link className="font-bold underline" to="/resend-verification">recover verification</Link>.
+          </StatusBanner>
+        )}
         <label className="block text-sm font-semibold">Email<Input className="mt-1" type="email" {...register('email', { required: 'Email is required' })} /></label>
         <FieldError>{errors.email?.message}</FieldError>
         <label className="block text-sm font-semibold">Password

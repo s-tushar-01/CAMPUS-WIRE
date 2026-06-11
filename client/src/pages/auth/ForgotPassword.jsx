@@ -4,6 +4,8 @@ import { toast } from 'react-toastify';
 import api from '../../services/api';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Form';
+import StatusBanner from '../../components/ui/StatusBanner';
+import StepIndicator from '../../components/ui/StepIndicator';
 import { unwrapApi } from '../../lib/utils';
 import AuthShell from './AuthShell';
 
@@ -30,6 +32,8 @@ export default function ForgotPassword() {
   return (
     <AuthShell title="Reset your password" subtitle="Enter your email and we will send a 6-digit OTP.">
       <form className="space-y-4" onSubmit={submit}>
+        <StepIndicator steps={['Email', 'Verify OTP', 'New password']} current={0} />
+        <StatusBanner title="Password reset OTP">Use the email attached to your CampusWire account.</StatusBanner>
         <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@campus.edu" required />
         <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Sending...' : 'Send OTP'}</Button>
       </form>

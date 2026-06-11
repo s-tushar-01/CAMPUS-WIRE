@@ -29,6 +29,13 @@ const syncLegacyLikes = (post) => {
     .map((reaction) => reaction.user);
 };
 
+const findUserReaction = (post, userId) => {
+  const userIdText = userId.toString();
+  const matches = (post.reactions || []).filter((item) => item.user.toString() === userIdText);
+  matches.slice(1).forEach((item) => post.reactions.pull(item._id));
+  return matches[0];
+};
+
 const accessiblePostQuery = (user, filter = 'all') => {
   const following = user.following || [];
   const baseAccess = [
@@ -199,17 +206,13 @@ const likeUnlikePost = async (req, res, next) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
 
-    const existing = post.reactions.find((item) => item.user.toString() === req.user._id.toString());
-    const isLiked = existing?.type === 'like';
+    const existing = findUserReaction(post, req.user._id);
+    const alreadyLiked = existing?.type === 'like';
 
-    if (isLiked) {
-      post.reactions.pull(existing._id);
-    } else {
-      if (existing) {
-        existing.type = 'like';
-      } else {
-        post.reactions.push({ user: req.user._id, type: 'like' });
-      }
+    if (!alreadyLiked) {
+      if (existing) existing.type = 'like';
+      else post.reactions.push({ user: req.user._id, type: 'like' });
+
       // Notify post author (skip if own post)
       if (post.author.toString() !== req.user._id.toString()) {
         await Notification.create({
@@ -223,7 +226,7 @@ const likeUnlikePost = async (req, res, next) => {
 
     syncLegacyLikes(post);
     await post.save();
-    res.json({ success: true, likes: post.likes.length, reactions: post.reactions, isLiked: !isLiked });
+    res.json({ success: true, likes: post.likes.length, reactions: post.reactions, isLiked: true });
   } catch (error) {
     next(error);
   }
@@ -241,11 +244,11 @@ const reactToPost = async (req, res, next) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
 
-    const existing = post.reactions.find((item) => item.user.toString() === req.user._id.toString());
-    const removed = existing?.type === type;
+    const existing = findUserReaction(post, req.user._id);
+    const alreadyReacted = existing?.type === type;
 
-    if (removed) {
-      post.reactions.pull(existing._id);
+    if (alreadyReacted) {
+      existing.createdAt = existing.createdAt || new Date();
     } else if (existing) {
       existing.type = type;
       existing.createdAt = new Date();
@@ -256,7 +259,7 @@ const reactToPost = async (req, res, next) => {
     syncLegacyLikes(post);
     await post.save();
 
-    if (!removed && post.author.toString() !== req.user._id.toString()) {
+    if (!alreadyReacted && post.author.toString() !== req.user._id.toString()) {
       await Notification.create({
         recipient: post.author,
         sender: req.user._id,
@@ -267,7 +270,7 @@ const reactToPost = async (req, res, next) => {
     }
 
     const populated = await populatePost(Post.findById(post._id));
-    res.json({ success: true, post: populated, removed });
+    res.json({ success: true, post: populated, removed: false });
   } catch (error) {
     next(error);
   }

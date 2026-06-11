@@ -4,6 +4,8 @@ import { toast } from 'react-toastify';
 import api from '../../services/api';
 import Button from '../../components/ui/Button';
 import { FieldError, Input, Select } from '../../components/ui/Form';
+import StatusBanner from '../../components/ui/StatusBanner';
+import StepIndicator from '../../components/ui/StepIndicator';
 import { unwrapApi } from '../../lib/utils';
 import AuthShell from './AuthShell';
 
@@ -37,6 +39,8 @@ export default function Register() {
   return (
     <AuthShell title="Join CampusWire" subtitle="Create your profile for a closed educational network." footer={<span>Already have an account? <Link className="font-semibold text-primary" to="/login">Sign in</Link></span>}>
       <form className="space-y-4" onSubmit={syncAndSubmit}>
+        <StepIndicator steps={['Create account', 'Verify email', 'Profile setup']} current={0} />
+        <StatusBanner title="Email verification required">After signup, we will send a six-digit code before opening the campus feed.</StatusBanner>
         <label className="block text-sm font-semibold">Name<Input className="mt-1" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Use at least 2 characters' } })} /></label>
         <FieldError>{errors.name?.message}</FieldError>
         <label className="block text-sm font-semibold">Username<Input className="mt-1" placeholder="campus_user" {...register('username', { minLength: { value: 3, message: 'Use at least 3 characters' }, maxLength: { value: 30, message: 'Use 30 characters or less' }, pattern: { value: /^[a-zA-Z0-9_]+$/, message: 'Only letters, numbers, and underscores' } })} /></label>

@@ -6,6 +6,8 @@ import PostCard from '../components/posts/PostCard';
 import { Card, CardContent } from '../components/ui/Card';
 import Skeleton from '../components/ui/Skeleton';
 import Badge from '../components/ui/Badge';
+import EmptyState from '../components/ui/EmptyState';
+import StatusBanner from '../components/ui/StatusBanner';
 
 const feedFilters = [
   { value: 'all', label: 'All' },
@@ -20,6 +22,7 @@ export default function Feed() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [welcome, setWelcome] = useState(() => sessionStorage.getItem('welcomeBack') || '');
 
   const load = async (nextPage = 1, nextFilter = filter) => {
     setLoading(true);
@@ -37,6 +40,11 @@ export default function Feed() {
     load(1, filter);
   }, [filter]);
 
+  const clearWelcome = () => {
+    sessionStorage.removeItem('welcomeBack');
+    setWelcome('');
+  };
+
   return (
     <AppShell>
       <div className="space-y-4">
@@ -47,6 +55,7 @@ export default function Feed() {
             <p className="mt-2 max-w-xl text-sm text-indigo-100">Share updates, follow your community, and keep up with announcements in one private space.</p>
           </CardContent>
         </Card>
+        {welcome && <StatusBanner tone="success" title={welcome}><button className="font-bold underline" onClick={clearWelcome}>Dismiss</button></StatusBanner>}
         <CreatePost onCreated={(post) => setPosts((current) => [post, ...current])} />
         <Card>
           <CardContent className="flex flex-wrap gap-2 py-3">
@@ -90,12 +99,5 @@ function FeedSkeleton() {
 }
 
 function EmptyFeed() {
-  return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <h2 className="font-bold">Your feed is quiet</h2>
-        <p className="mt-2 text-sm text-slate-500">Follow people or wait for admin broadcasts to see updates here.</p>
-      </CardContent>
-    </Card>
-  );
+  return <EmptyState title="Your feed is quiet" description="Follow people, write your first post, or wait for admin broadcasts to see updates here." />;
 }
