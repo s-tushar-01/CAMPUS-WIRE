@@ -12,8 +12,8 @@ const getConversations = async (req, res, next) => {
       $or: [{ sender: userId }, { receiver: userId }],
     })
       .sort({ createdAt: -1 })
-      .populate('sender', '_id name username profilePic')
-      .populate('receiver', '_id name username profilePic');
+      .populate('sender', '_id name username profilePic isDemoOnline')
+      .populate('receiver', '_id name username profilePic isDemoOnline');
 
     // Build conversation map
     const conversationMap = new Map();

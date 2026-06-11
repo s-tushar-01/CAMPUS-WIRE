@@ -95,6 +95,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  isDemoOnline: {
+    type: Boolean,
+    default: false,
+  },
   // OTP for forgot password and email verification
   hashedOTP: { type: String },
   otpExpiry: { type: Date },

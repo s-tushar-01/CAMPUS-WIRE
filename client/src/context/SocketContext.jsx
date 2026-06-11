@@ -10,6 +10,7 @@ export function SocketProvider({ children }) {
   const { user, token } = useAuth();
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [demoOnlineUsers, setDemoOnlineUsers] = useState(new Set());
   const [typingUsers, setTypingUsers] = useState({});
   const [incomingMessage, setIncomingMessage] = useState(null);
   const [outgoingMessage, setOutgoingMessage] = useState(null);
@@ -43,13 +44,34 @@ export function SocketProvider({ children }) {
     };
   }, [user, token]);
 
+  useEffect(() => {
+    if (!user || import.meta.env.VITE_DEMO_ONLINE_USERS !== 'true') {
+      setDemoOnlineUsers(new Set());
+      return;
+    }
+
+    let active = true;
+    api.get('/api/users/suggestions')
+      .then(({ data }) => {
+        if (!active) return;
+        setDemoOnlineUsers(new Set((data.users || []).filter((item) => item.isDemoOnline).map((item) => item._id)));
+      })
+      .catch(() => {
+        if (active) setDemoOnlineUsers(new Set());
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
   const sendMessage = (receiverId, content) => {
     socket?.emit('message:send', { receiverId, content });
   };
 
   const value = useMemo(
-    () => ({ socket, onlineUsers, typingUsers, incomingMessage, outgoingMessage, sendMessage }),
-    [socket, onlineUsers, typingUsers, incomingMessage, outgoingMessage]
+    () => ({ socket, onlineUsers: new Set([...onlineUsers, ...demoOnlineUsers]), typingUsers, incomingMessage, outgoingMessage, sendMessage }),
+    [socket, onlineUsers, demoOnlineUsers, typingUsers, incomingMessage, outgoingMessage]
   );
 
   return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;

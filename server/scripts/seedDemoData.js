@@ -1,16 +1,24 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const dns = require('dns');
 
 const User = require('../models/User');
 const Post = require('../models/Post');
 const Message = require('../models/Message');
 const Notification = require('../models/Notification');
+const UsernameReservation = require('../models/UsernameReservation');
 
 const DEMO_DOMAIN = 'campuswire.demo';
 const DEMO_PASSWORD = 'Campus@123';
-const USER_COUNT = 64;
-const POST_COUNT = 120;
-const MESSAGE_COUNT = 48;
+const USER_COUNT = Number(process.env.DEMO_USER_COUNT || 500);
+const POST_COUNT = Number(process.env.DEMO_POST_COUNT || 900);
+const MESSAGE_COUNT = Number(process.env.DEMO_MESSAGE_COUNT || 350);
+const NOTIFICATION_COUNT = Number(process.env.DEMO_NOTIFICATION_COUNT || 600);
+const DEMO_ONLINE_COUNT = Number(process.env.DEMO_ONLINE_COUNT || 80);
+
+const reactionTypes = ['like', 'love', 'celebrate', 'helpful', 'curious'];
+
+dns.setServers((process.env.DNS_SERVERS || '8.8.8.8,1.1.1.1').split(','));
 
 const firstNames = [
   'Aarav', 'Priya', 'Rohan', 'Sneha', 'Kabir', 'Ananya', 'Ishaan', 'Meera',
@@ -27,18 +35,18 @@ const lastNames = [
 ];
 
 const bios = [
-  'Computer Science student building full-stack projects.',
-  'Campus club volunteer and event coordinator.',
-  'Learning data structures, design, and product thinking.',
-  'Faculty mentor for student projects and research groups.',
-  'Interested in AI, startups, and hackathons.',
-  'Working on open-source tools after class.',
-  'Designing better workflows for student communities.',
-  'Part of the coding club and weekend study circles.',
-  'Exploring cloud, APIs, and realtime applications.',
-  'Always up for team projects and campus events.',
-  'Sharing notes, resources, and placement preparation tips.',
-  'Building tiny apps to solve campus problems.',
+  'CS student. Department: Computer Science. Batch: 2027. Interests: AI, Hackathons, Clubs.',
+  'Campus volunteer. Department: Student Affairs. Batch: 2026. Interests: Events, Clubs.',
+  'Learning DSA and product thinking. Department: IT. Batch: 2027. Interests: Placements.',
+  'Faculty mentor for student projects. Department: CSE. Interests: Research, Events.',
+  'Interested in AI and startups. Department: ECE. Batch: 2026. Interests: AI, Startups.',
+  'Open-source after class. Department: IT. Batch: 2025. Interests: Research, AI.',
+  'Designing better campus workflows. Department: Design. Batch: 2027. Interests: Clubs.',
+  'Coding club and study circles. Department: CSE. Batch: 2028. Interests: Academics.',
+  'Exploring cloud and realtime apps. Department: CSE. Batch: 2026. Interests: AI.',
+  'Always up for team projects. Department: EEE. Batch: 2027. Interests: Events.',
+  'Sharing notes and placement tips. Department: IT. Batch: 2025. Interests: Placements.',
+  'Building tiny campus apps. Department: CSE. Batch: 2028. Interests: Startups.',
 ];
 
 const postTemplates = [
@@ -62,6 +70,11 @@ const postTemplates = [
   'Working on socket-based messaging. Realtime UI is surprisingly fun.',
   'Placement prep circle starts at 6 PM in lab 2.',
   'What features should a campus social app have next?',
+  'New students can use CampusWire onboarding to add department, batch, and interests.',
+  'Try the upgraded reactions. One person, one reaction, clean count.',
+  'Admin broadcast preview looks much clearer now.',
+  'Message fallback states are ready for weak network days.',
+  'The report and save UI shells are a good start for moderation workflows.',
 ];
 
 const commentTemplates = [
@@ -84,6 +97,42 @@ const messageTemplates = [
   'That sounds good. Let us discuss ideas tomorrow.',
   'I liked your post about the React session.',
   'Thanks. I am preparing a small demo for it.',
+  'The new onboarding screen looks useful for freshers.',
+  'Can you check the broadcast preview before we send it?',
+  'I saw your reaction on the announcement.',
+  'Let us test chat from the messages page.',
+];
+
+const notificationMessages = [
+  'reacted with love',
+  'found this helpful',
+  'shared your post',
+  'mentioned your announcement',
+  'started following you',
+  'commented on your campus update',
+];
+
+const postImageUrls = [
+  'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
 ];
 
 const slugify = (text) =>
@@ -98,6 +147,11 @@ const usernameFor = (text, index = 0) =>
 const pick = (items, index) => items[index % items.length];
 
 const minutesAgo = (minutes) => new Date(Date.now() - minutes * 60 * 1000);
+
+const postImageFor = (index) => ({
+  url: `${pick(postImageUrls, index)}&ixid=campuswire-demo-${index}`,
+  public_id: '',
+});
 
 function buildDemoProfiles() {
   const profiles = [
@@ -128,10 +182,15 @@ function buildDemoProfiles() {
 }
 
 async function resetDemoData() {
+  const profiles = buildDemoProfiles();
+  const demoUsernames = profiles.map((profile) => profile.username);
   const demoUsers = await User.find({ email: new RegExp(`@${DEMO_DOMAIN}$`) }).select('_id');
   const demoIds = demoUsers.map((user) => user._id);
 
-  if (!demoIds.length) return;
+  if (!demoIds.length) {
+    await UsernameReservation.deleteMany({ username: { $in: demoUsernames } });
+    return;
+  }
 
   await Promise.all([
     Notification.deleteMany({
@@ -141,6 +200,7 @@ async function resetDemoData() {
       $or: [{ sender: { $in: demoIds } }, { receiver: { $in: demoIds } }],
     }),
     Post.deleteMany({ author: { $in: demoIds } }),
+    UsernameReservation.deleteMany({ $or: [{ user: { $in: demoIds } }, { username: { $in: demoUsernames } }] }),
   ]);
 
   await User.updateMany(
@@ -161,8 +221,14 @@ async function seedUsers() {
       user = await User.create({
         ...profile,
         password: DEMO_PASSWORD,
+        isEmailVerified: true,
+        isDemoOnline: users.length > 0 && users.length <= DEMO_ONLINE_COUNT,
         profilePic: {
           url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile.name)}`,
+          public_id: '',
+        },
+        coverPic: {
+          url: `https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80&seed=${encodeURIComponent(profile.username)}`,
           public_id: '',
         },
       });
@@ -172,8 +238,14 @@ async function seedUsers() {
       user.bio = profile.bio;
       user.role = profile.role;
       user.isActive = true;
+      user.isEmailVerified = true;
+      user.isDemoOnline = users.length > 0 && users.length <= DEMO_ONLINE_COUNT;
       user.profilePic = {
         url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile.name)}`,
+        public_id: '',
+      };
+      user.coverPic = {
+        url: `https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80&seed=${encodeURIComponent(profile.username)}`,
         public_id: '',
       };
       await user.save({ validateBeforeSave: false });
@@ -209,7 +281,33 @@ async function seedFollowGraph(users) {
 async function seedPosts(users) {
   const userIds = users.map((user) => user._id);
   const existingPosts = await Post.countDocuments({ author: { $in: userIds } });
-  if (existingPosts > 0) return 0;
+  if (existingPosts > 0) {
+    const demoPosts = await Post.find({ author: { $in: userIds } });
+    let upgraded = 0;
+    for (let index = 0; index < demoPosts.length; index += 1) {
+      const post = demoPosts[index];
+      let changed = false;
+      if (!post.reactions?.length) {
+        const legacyLikes = post.likes?.length ? post.likes : userIds.slice(2, 7);
+        post.reactions = legacyLikes.slice(0, 8).map((id, likeIndex) => ({
+          user: id,
+          type: pick(reactionTypes, index + likeIndex),
+          createdAt: minutesAgo(index * 34 + likeIndex * 7),
+        }));
+        post.likes = post.reactions.filter((reaction) => reaction.type === 'like').map((reaction) => reaction.user);
+        changed = true;
+      }
+      if (!post.image?.url) {
+        post.image = postImageFor(index);
+        changed = true;
+      }
+      if (changed) {
+        await post.save({ validateBeforeSave: false });
+        upgraded += 1;
+      }
+    }
+    return upgraded;
+  }
 
   const posts = [];
   const admin = users[0];
@@ -218,10 +316,18 @@ async function seedPosts(users) {
     const author = index % 10 === 0 ? admin : users[(index % (users.length - 1)) + 1];
     const likeCount = (index % 9) + 2;
     const likes = [];
+    const reactions = [];
     const comments = [];
 
     for (let likeIndex = 0; likeIndex < likeCount; likeIndex += 1) {
-      likes.push(userIds[(index + likeIndex + 3) % userIds.length]);
+      const reactionUser = userIds[(index + likeIndex + 3) % userIds.length];
+      const type = pick(reactionTypes, index + likeIndex);
+      reactions.push({
+        user: reactionUser,
+        type,
+        createdAt: minutesAgo(index * 34 + likeIndex * 7),
+      });
+      if (type === 'like') likes.push(reactionUser);
     }
 
     for (let commentIndex = 0; commentIndex < index % 4; commentIndex += 1) {
@@ -236,7 +342,9 @@ async function seedPosts(users) {
       author: author._id,
       content: pick(postTemplates, index),
       likes,
+      reactions,
       comments,
+      image: postImageFor(index),
       isBroadcast: author._id.toString() === admin._id.toString(),
       createdAt: minutesAgo(index * 53 + 15),
     });
@@ -274,6 +382,41 @@ async function seedMessages(users) {
   return messages.length;
 }
 
+async function seedNotifications(users) {
+  const userIds = users.map((user) => user._id);
+  const existingNotifications = await Notification.countDocuments({
+    $or: [{ recipient: { $in: userIds } }, { sender: { $in: userIds } }],
+  });
+  if (existingNotifications > 0) return 0;
+
+  const posts = await Post.find({ author: { $in: userIds } }).select('_id author isBroadcast').limit(POST_COUNT);
+  if (!posts.length) return 0;
+
+  const notifications = [];
+
+  for (let index = 0; index < NOTIFICATION_COUNT; index += 1) {
+    const post = posts[index % posts.length];
+    const sender = users[(index % (users.length - 1)) + 1];
+    const recipient = users[((index + 9) % (users.length - 1)) + 1];
+    const type = post.isBroadcast
+      ? 'broadcast'
+      : pick(['like', 'reaction', 'comment', 'share', 'follow'], index);
+
+    notifications.push({
+      recipient: type === 'broadcast' ? recipient._id : (post.author || recipient._id),
+      sender: type === 'broadcast' ? users[0]._id : sender._id,
+      type,
+      post: type === 'follow' ? undefined : post._id,
+      message: pick(notificationMessages, index),
+      isRead: index % 4 === 0,
+      createdAt: minutesAgo(index * 17 + 4),
+    });
+  }
+
+  await Notification.insertMany(notifications);
+  return notifications.length;
+}
+
 async function main() {
   const shouldReset = process.argv.includes('--reset');
 
@@ -293,10 +436,12 @@ async function main() {
   await seedFollowGraph(users);
   const postsCreated = await seedPosts(users);
   const messagesCreated = await seedMessages(users);
+  const notificationsCreated = await seedNotifications(users);
 
   console.log(`Demo users ready: ${users.length}`);
   console.log(`Demo posts created: ${postsCreated}`);
   console.log(`Demo messages created: ${messagesCreated}`);
+  console.log(`Demo notifications created: ${notificationsCreated}`);
   console.log(`Demo login password for seeded users: ${DEMO_PASSWORD}`);
 }
 

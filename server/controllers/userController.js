@@ -159,7 +159,7 @@ const searchUsers = async (req, res, next) => {
         { $or: [{ name: regex }, { username: regex }, { email: regex }] },
       ],
     })
-      .select('_id name username email profilePic bio')
+      .select('_id name username email profilePic bio isDemoOnline')
       .limit(20);
 
     res.json({ success: true, users });
@@ -176,7 +176,7 @@ const getSuggestions = async (req, res, next) => {
     const excludeIds = [...currentUser.following, req.user._id];
 
     const users = await User.find({ _id: { $nin: excludeIds } })
-      .select('_id name username profilePic bio')
+      .select('_id name username profilePic bio isDemoOnline')
       .limit(5);
 
     res.json({ success: true, users });
