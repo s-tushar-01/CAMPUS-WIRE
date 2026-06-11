@@ -18,6 +18,23 @@ const commentSchema = new mongoose.Schema({
   },
 });
 
+const reactionSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  type: {
+    type: String,
+    enum: ['like', 'love', 'celebrate', 'helpful', 'curious'],
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const postSchema = new mongoose.Schema({
   author: {
     type: mongoose.Schema.Types.ObjectId,
@@ -33,13 +50,29 @@ const postSchema = new mongoose.Schema({
     url: { type: String, default: '' },
     public_id: { type: String, default: '' },
   },
+  audience: {
+    type: String,
+    enum: ['campus', 'followers', 'friends', 'private'],
+    default: 'campus',
+  },
   likes: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
   ],
+  reactions: [reactionSchema],
   comments: [commentSchema],
+  shareOf: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Post',
+  },
+  shareComment: {
+    type: String,
+    maxlength: 500,
+    trim: true,
+    default: '',
+  },
   isBroadcast: {
     type: Boolean,
     default: false,
@@ -52,5 +85,7 @@ const postSchema = new mongoose.Schema({
 
 // Index for efficient feed queries
 postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ isBroadcast: 1, createdAt: -1 });
+postSchema.index({ audience: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Post', postSchema);

@@ -47,7 +47,13 @@ export default function Notifications() {
 function label(item) {
   if (item.type === 'broadcast') return `Announcement: ${item.message || 'New campus announcement'}`;
   if (item.type === 'like') return `${item.sender?.name || 'Someone'} liked your post`;
+  if (item.type === 'reaction') return `${item.sender?.name || 'Someone'} reacted to your post`;
   if (item.type === 'comment') return `${item.sender?.name || 'Someone'} commented on your post`;
+  if (item.type === 'share') return `${item.sender?.name || 'Someone'} shared your post`;
   if (item.type === 'follow') return `${item.sender?.name || 'Someone'} started following you`;
+  if (item.type === 'friend_request') return `${item.sender?.name || 'Someone'} sent you a friend request`;
+  if (item.type === 'friend_accept') return `${item.sender?.name || 'Someone'} accepted your friend request`;
+  if (item.type === 'group_invite') return `${item.sender?.name || 'Someone'} invited you to a group`;
+  if (item.type === 'event_invite') return `${item.sender?.name || 'Someone'} invited you to an event`;
   return 'New notification';
 }

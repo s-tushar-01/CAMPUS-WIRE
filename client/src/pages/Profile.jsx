@@ -123,7 +123,15 @@ export default function Profile() {
             )}
             {postView === 'feed' && (
               <div className="space-y-4">
-                {posts.map((post) => <PostCard key={post._id} post={post} onDelete={(id) => setPosts((current) => current.filter((item) => item._id !== id))} />)}
+                {posts.map((post) => (
+                  <PostCard
+                    key={post._id}
+                    post={post}
+                    onDelete={(id) => setPosts((current) => current.filter((item) => item._id !== id))}
+                    onUpdated={(nextPost) => setPosts((current) => current.map((item) => item._id === nextPost._id ? nextPost : item))}
+                    onShared={(sharedPost) => setPosts((current) => [sharedPost, ...current])}
+                  />
+                ))}
               </div>
             )}
             {!posts.length && <div className="py-8 text-center text-sm text-slate-500">No posts yet.</div>}
@@ -168,6 +176,7 @@ function ConnectionsModal({ open, title, users, currentUserId, onClose }) {
 
 function PostTile({ post }) {
   const hasImage = !!imageUrl(post.image);
+  const reactionCount = post.reactions?.length || post.likes?.length || 0;
   return (
     <div className="group relative aspect-square overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-900">
       {hasImage ? (
@@ -178,7 +187,7 @@ function PostTile({ post }) {
         </div>
       )}
       <div className="absolute inset-0 flex items-center justify-center gap-5 bg-slate-950/0 text-sm font-bold text-white opacity-0 transition group-hover:bg-slate-950/55 group-hover:opacity-100">
-        <span className="flex items-center gap-1"><ThumbsUp className="h-4 w-4" />{post.likes?.length || 0}</span>
+        <span className="flex items-center gap-1"><ThumbsUp className="h-4 w-4" />{reactionCount}</span>
         <span className="flex items-center gap-1"><MessageCircle className="h-4 w-4" />{post.comments?.length || 0}</span>
       </div>
     </div>

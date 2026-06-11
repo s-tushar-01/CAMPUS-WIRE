@@ -2,11 +2,73 @@ const Post = require('../models/Post');
 const Notification = require('../models/Notification');
 const { cloudinary } = require('../middleware/upload');
 
+const REACTION_TYPES = ['like', 'love', 'celebrate', 'helpful', 'curious'];
+const AUDIENCES = ['campus', 'followers', 'friends', 'private'];
+
+const postPopulate = [
+  { path: 'author', select: '_id name profilePic role' },
+  { path: 'comments.user', select: '_id name profilePic' },
+  {
+    path: 'shareOf',
+    populate: [
+      { path: 'author', select: '_id name profilePic role' },
+      { path: 'comments.user', select: '_id name profilePic' },
+    ],
+  },
+];
+
+const populatePost = (query) => postPopulate.reduce((current, item) => current.populate(item), query);
+
+const syncLegacyLikes = (post) => {
+  post.likes = (post.reactions || [])
+    .filter((reaction) => reaction.type === 'like')
+    .map((reaction) => reaction.user);
+};
+
+const accessiblePostQuery = (user, filter = 'all') => {
+  const following = user.following || [];
+  const baseAccess = [
+    { author: user._id },
+    { isBroadcast: true },
+    { audience: 'campus' },
+    { audience: 'followers', author: { $in: following } },
+  ];
+
+  if (filter === 'following') {
+    return {
+      $and: [
+        { $or: baseAccess },
+        { $or: [{ author: { $in: [...following, user._id] } }, { isBroadcast: true }] },
+      ],
+    };
+  }
+
+  if (filter === 'announcements') {
+    return { isBroadcast: true };
+  }
+
+  if (filter === 'mine') {
+    return { author: user._id };
+  }
+
+  return { $or: baseAccess };
+};
+
+const canViewPost = (post, user) => {
+  const authorId = post.author?._id || post.author;
+  return (
+    authorId.toString() === user._id.toString() ||
+    post.isBroadcast ||
+    post.audience === 'campus' ||
+    (post.audience === 'followers' && user.following.some((id) => id.toString() === authorId.toString()))
+  );
+};
+
 // @route   POST /api/posts
 // @access  Protected
 const createPost = async (req, res, next) => {
   try {
-    const { content, isBroadcast } = req.body;
+    const { content, isBroadcast, audience = 'campus' } = req.body;
 
     if (!content && !req.file) {
       return res.status(400).json({ success: false, message: 'Post must have content or an image' });
@@ -16,6 +78,10 @@ const createPost = async (req, res, next) => {
       author: req.user._id,
       content: content || '',
     };
+
+    if (AUDIENCES.includes(audience)) {
+      postData.audience = audience;
+    }
 
     if (req.file) {
       postData.image = { url: req.file.path, public_id: req.file.filename };
@@ -40,22 +106,15 @@ const getFeed = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const filter = req.query.filter || 'all';
     const skip = (page - 1) * limit;
-
-    const query = {
-      $or: [
-        { author: { $in: [...req.user.following, req.user._id] } },
-        { isBroadcast: true },
-      ],
-    };
+    const query = accessiblePostQuery(req.user, filter);
 
     const total = await Post.countDocuments(query);
-    const posts = await Post.find(query)
+    const posts = await populatePost(Post.find(query))
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .populate('author', '_id name profilePic role')
-      .populate('comments.user', '_id name profilePic');
+      .limit(limit);
 
     res.json({
       success: true,
@@ -72,13 +131,14 @@ const getFeed = async (req, res, next) => {
 // @access  Protected
 const getSinglePost = async (req, res, next) => {
   try {
-    const post = await Post.findById(req.params.id)
-      .populate('author', '_id name profilePic role')
-      .populate('comments.user', '_id name profilePic');
+    const post = await populatePost(Post.findById(req.params.id));
 
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
 
-    const isLiked = post.likes.some((id) => id.toString() === req.user._id.toString());
+    if (!canViewPost(post, req.user)) return res.status(403).json({ success: false, message: 'Not authorized to view this post' });
+
+    const reaction = post.reactions.find((item) => item.user.toString() === req.user._id.toString());
+    const isLiked = reaction?.type === 'like';
     res.json({ success: true, post, isLiked });
   } catch (error) {
     next(error);
@@ -92,13 +152,23 @@ const getUserPosts = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const ownProfile = req.params.userId === req.user._id.toString();
+    const audienceQuery = ownProfile
+      ? { author: req.params.userId }
+      : {
+          author: req.params.userId,
+          $or: [
+            { audience: 'campus' },
+            { isBroadcast: true },
+            { audience: 'followers', author: { $in: req.user.following || [] } },
+          ],
+        };
 
-    const total = await Post.countDocuments({ author: req.params.userId });
-    const posts = await Post.find({ author: req.params.userId })
+    const total = await Post.countDocuments(audienceQuery);
+    const posts = await populatePost(Post.find(audienceQuery))
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .populate('author', '_id name profilePic role');
+      .limit(limit);
 
     res.json({
       success: true,
@@ -118,12 +188,17 @@ const likeUnlikePost = async (req, res, next) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
 
-    const isLiked = post.likes.includes(req.user._id);
+    const existing = post.reactions.find((item) => item.user.toString() === req.user._id.toString());
+    const isLiked = existing?.type === 'like';
 
     if (isLiked) {
-      post.likes.pull(req.user._id);
+      post.reactions.pull(existing._id);
     } else {
-      post.likes.push(req.user._id);
+      if (existing) {
+        existing.type = 'like';
+      } else {
+        post.reactions.push({ user: req.user._id, type: 'like' });
+      }
       // Notify post author (skip if own post)
       if (post.author.toString() !== req.user._id.toString()) {
         await Notification.create({
@@ -135,8 +210,88 @@ const likeUnlikePost = async (req, res, next) => {
       }
     }
 
+    syncLegacyLikes(post);
     await post.save();
-    res.json({ success: true, likes: post.likes.length, isLiked: !isLiked });
+    res.json({ success: true, likes: post.likes.length, reactions: post.reactions, isLiked: !isLiked });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @route   PUT /api/posts/:id/reaction
+// @access  Protected
+const reactToPost = async (req, res, next) => {
+  try {
+    const { type } = req.body;
+    if (!REACTION_TYPES.includes(type)) {
+      return res.status(400).json({ success: false, message: 'Invalid reaction type' });
+    }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    const existing = post.reactions.find((item) => item.user.toString() === req.user._id.toString());
+    const removed = existing?.type === type;
+
+    if (removed) {
+      post.reactions.pull(existing._id);
+    } else if (existing) {
+      existing.type = type;
+      existing.createdAt = new Date();
+    } else {
+      post.reactions.push({ user: req.user._id, type });
+    }
+
+    syncLegacyLikes(post);
+    await post.save();
+
+    if (!removed && post.author.toString() !== req.user._id.toString()) {
+      await Notification.create({
+        recipient: post.author,
+        sender: req.user._id,
+        type: type === 'like' ? 'like' : 'reaction',
+        post: post._id,
+        message: type,
+      });
+    }
+
+    const populated = await populatePost(Post.findById(post._id));
+    res.json({ success: true, post: populated, removed });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @route   POST /api/posts/:id/share
+// @access  Protected
+const sharePost = async (req, res, next) => {
+  try {
+    const original = await Post.findById(req.params.id);
+    if (!original) return res.status(404).json({ success: false, message: 'Post not found' });
+    if (!canViewPost(original, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to share this post' });
+    }
+
+    const { content = '', audience = 'campus' } = req.body;
+    const post = await Post.create({
+      author: req.user._id,
+      content: content.trim(),
+      shareComment: content.trim(),
+      shareOf: original._id,
+      audience: AUDIENCES.includes(audience) ? audience : 'campus',
+    });
+
+    if (original.author.toString() !== req.user._id.toString()) {
+      await Notification.create({
+        recipient: original.author,
+        sender: req.user._id,
+        type: 'share',
+        post: original._id,
+      });
+    }
+
+    const populated = await populatePost(Post.findById(post._id));
+    res.status(201).json({ success: true, post: populated });
   } catch (error) {
     next(error);
   }
@@ -237,6 +392,8 @@ module.exports = {
   getSinglePost,
   getUserPosts,
   likeUnlikePost,
+  reactToPost,
+  sharePost,
   addComment,
   deleteComment,
   deletePost,
