@@ -45,6 +45,8 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
   const [local, setLocal] = useState(post);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comment, setComment] = useState('');
+  const [replyingTo, setReplyingTo] = useState('');
+  const [replyText, setReplyText] = useState('');
   const [sharing, setSharing] = useState(false);
   const [shareText, setShareText] = useState('');
   const [shareAudience, setShareAudience] = useState('campus');
@@ -68,6 +70,7 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
   }, [local.reactions, local.likes, user?._id]);
 
   const totalReactions = Object.values(reactionSummary).reduce((sum, count) => sum + count, 0);
+  const totalComments = (local.comments || []).reduce((sum, item) => sum + 1 + (item.replies?.length || 0), 0);
   const activeReaction = REACTIONS.find((reaction) => reaction.type === myReaction) || REACTIONS[0];
   const ActiveIcon = activeReaction.icon;
 
@@ -103,6 +106,33 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
     try {
       await api.delete(`/api/posts/${local._id}/comment/${commentId}`);
       const next = { ...local, comments: (local.comments || []).filter((item) => item._id !== commentId) };
+      setLocal(next);
+      onUpdated?.(next);
+    } catch (error) {
+      toast.error(unwrapApi(error));
+    }
+  };
+
+  const addReply = async (event, commentId) => {
+    event.preventDefault();
+    if (!replyText.trim()) return;
+    try {
+      const { data } = await api.post(`/api/posts/${local._id}/comment/${commentId}/reply`, { text: replyText.trim() });
+      const next = { ...local, comments: data.comments };
+      setLocal(next);
+      setReplyText('');
+      setReplyingTo('');
+      onUpdated?.(next);
+    } catch (error) {
+      toast.error(unwrapApi(error));
+    }
+  };
+
+  const deleteReply = async (commentId, replyId) => {
+    if (!window.confirm('Delete this reply?')) return;
+    try {
+      const { data } = await api.delete(`/api/posts/${local._id}/comment/${commentId}/reply/${replyId}`);
+      const next = { ...local, comments: data.comments };
       setLocal(next);
       onUpdated?.(next);
     } catch (error) {
@@ -173,7 +203,7 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-sm text-slate-500 dark:border-slate-800">
             <ReactionSummary counts={reactionSummary} total={totalReactions} />
             <button className="hover:text-primary" onClick={() => setCommentsOpen((value) => !value)}>
-              {(local.comments?.length || 0)} comments
+              {totalComments} comments
             </button>
           </div>
 
@@ -204,24 +234,73 @@ export default function PostCard({ post, onDelete, onUpdated, onShared }) {
           {commentsOpen && (
             <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
               {(local.comments || []).map((item) => {
-                const canDeleteComment = user?._id === item.user?._id || user?.role === 'admin';
+                const canDeleteComment = user?._id === item.user?._id || user?._id === local.author?._id || user?.role === 'admin';
                 return (
-                  <div key={item._id} className="flex gap-2">
-                    <Avatar user={item.user} size="sm" />
-                    <div className="min-w-0 flex-1 rounded-lg bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold">{item.user?.name || 'Member'}</p>
-                          <p className="text-xs text-slate-500">{format(item.createdAt)}</p>
+                  <div key={item._id} className="space-y-2">
+                    <div className="flex gap-2">
+                      <Avatar user={item.user} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold">{item.user?.name || 'Member'}</p>
+                              <p className="text-xs text-slate-500">{format(item.createdAt)}</p>
+                            </div>
+                            {canDeleteComment && (
+                              <button className="text-slate-400 hover:text-error" onClick={() => deleteComment(item._id)} aria-label="Delete comment">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="mt-1 whitespace-pre-wrap">{item.text}</p>
                         </div>
-                        {canDeleteComment && (
-                          <button className="text-slate-400 hover:text-error" onClick={() => deleteComment(item._id)} aria-label="Delete comment">
-                            <Trash2 className="h-3.5 w-3.5" />
+                        <div className="mt-1 flex items-center gap-3 px-2 text-xs font-semibold text-slate-500">
+                          <button className="hover:text-primary" onClick={() => {
+                            setReplyingTo((current) => current === item._id ? '' : item._id);
+                            setReplyText('');
+                          }}>
+                            Reply
                           </button>
-                        )}
+                          {!!item.replies?.length && <span>{item.replies.length} replies</span>}
+                        </div>
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap">{item.text}</p>
                     </div>
+                    {!!item.replies?.length && (
+                      <div className="ml-10 space-y-2 border-l border-slate-200 pl-3 dark:border-slate-800">
+                        {item.replies.map((reply) => {
+                          const canDeleteReply =
+                            user?._id === reply.user?._id ||
+                            user?._id === item.user?._id ||
+                            user?._id === local.author?._id ||
+                            user?.role === 'admin';
+                          return (
+                            <div key={reply._id} className="flex gap-2">
+                              <Avatar user={reply.user} size="sm" />
+                              <div className="min-w-0 flex-1 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="font-semibold">{reply.user?.name || 'Member'}</p>
+                                    <p className="text-xs text-slate-500">{format(reply.createdAt)}</p>
+                                  </div>
+                                  {canDeleteReply && (
+                                    <button className="text-slate-400 hover:text-error" onClick={() => deleteReply(item._id, reply._id)} aria-label="Delete reply">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                                <p className="mt-1 whitespace-pre-wrap">{reply.text}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {replyingTo === item._id && (
+                      <form onSubmit={(event) => addReply(event, item._id)} className="ml-10 flex gap-2">
+                        <Input value={replyText} onChange={(event) => setReplyText(event.target.value.slice(0, 500))} placeholder={`Reply to ${item.user?.name || 'comment'}`} />
+                        <Button type="submit" disabled={!replyText.trim()}>Reply</Button>
+                      </form>
+                    )}
                   </div>
                 );
               })}

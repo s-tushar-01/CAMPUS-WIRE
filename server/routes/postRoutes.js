@@ -11,7 +11,9 @@ const {
   reactToPost,
   sharePost,
   addComment,
+  addReply,
   deleteComment,
+  deleteReply,
   deletePost,
 } = require('../controllers/postController');
 
@@ -24,7 +26,9 @@ router.put('/:id/like', protect, likeUnlikePost);
 router.put('/:id/reaction', protect, reactToPost);
 router.post('/:id/share', protect, sharePost);
 router.post('/:id/comment', protect, addComment);
+router.post('/:id/comment/:commentId/reply', protect, addReply);
 router.delete('/:id/comment/:commentId', protect, deleteComment);
+router.delete('/:id/comment/:commentId/reply/:replyId', protect, deleteReply);
 router.delete('/:id', protect, deletePost);
 
 module.exports = router;

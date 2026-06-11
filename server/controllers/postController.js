@@ -8,11 +8,13 @@ const AUDIENCES = ['campus', 'followers', 'friends', 'private'];
 const postPopulate = [
   { path: 'author', select: '_id name profilePic role' },
   { path: 'comments.user', select: '_id name profilePic' },
+  { path: 'comments.replies.user', select: '_id name profilePic' },
   {
     path: 'shareOf',
     populate: [
       { path: 'author', select: '_id name profilePic role' },
       { path: 'comments.user', select: '_id name profilePic' },
+      { path: 'comments.replies.user', select: '_id name profilePic' },
     ],
   },
 ];
@@ -326,7 +328,51 @@ const addComment = async (req, res, next) => {
     }
 
     await post.populate('comments.user', '_id name profilePic');
+    await post.populate('comments.replies.user', '_id name profilePic');
     res.json({ success: true, comments: post.comments });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @route   POST /api/posts/:id/comment/:commentId/reply
+// @access  Protected
+const addReply = async (req, res, next) => {
+  try {
+    const { text } = req.body;
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Reply text is required' });
+    }
+    if (text.length > 500) {
+      return res.status(400).json({ success: false, message: 'Reply must be 500 characters or less' });
+    }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+
+    comment.replies.push({ user: req.user._id, text: text.trim() });
+    await post.save();
+
+    const notifyUsers = new Set([
+      post.author.toString(),
+      comment.user.toString(),
+    ]);
+    notifyUsers.delete(req.user._id.toString());
+
+    await Promise.all(Array.from(notifyUsers).map((recipient) => Notification.create({
+      recipient,
+      sender: req.user._id,
+      type: 'comment',
+      post: post._id,
+      message: 'replied',
+    })));
+
+    await post.populate('comments.user', '_id name profilePic');
+    await post.populate('comments.replies.user', '_id name profilePic');
+    res.status(201).json({ success: true, comments: post.comments });
   } catch (error) {
     next(error);
   }
@@ -354,6 +400,39 @@ const deleteComment = async (req, res, next) => {
     await post.save();
 
     res.json({ success: true, message: 'Comment deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @route   DELETE /api/posts/:id/comment/:commentId/reply/:replyId
+// @access  Protected
+const deleteReply = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+
+    const reply = comment.replies.id(req.params.replyId);
+    if (!reply) return res.status(404).json({ success: false, message: 'Reply not found' });
+
+    if (
+      reply.user.toString() !== req.user._id.toString() &&
+      comment.user.toString() !== req.user._id.toString() &&
+      post.author.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this reply' });
+    }
+
+    comment.replies.pull({ _id: req.params.replyId });
+    await post.save();
+
+    await post.populate('comments.user', '_id name profilePic');
+    await post.populate('comments.replies.user', '_id name profilePic');
+    res.json({ success: true, comments: post.comments });
   } catch (error) {
     next(error);
   }
@@ -395,6 +474,8 @@ module.exports = {
   reactToPost,
   sharePost,
   addComment,
+  addReply,
   deleteComment,
+  deleteReply,
   deletePost,
 };
