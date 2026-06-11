@@ -4,6 +4,7 @@ import ProtectedRoute from './components/routing/ProtectedRoute';
 
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import VerifyRegistration from './pages/auth/VerifyRegistration';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import VerifyOtp from './pages/auth/VerifyOtp';
 import ResetPassword from './pages/auth/ResetPassword';
@@ -33,6 +34,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/verify-signup" element={<PublicRoute><VerifyRegistration /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
       <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />

@@ -5,6 +5,7 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const {
   register,
+  verifyRegistration,
   login,
   getMe,
   forgotPassword,
@@ -31,17 +32,26 @@ const loginValidation = [
 ];
 
 router.post('/register', registerValidation, register);
+router.post('/verify-registration', verifyRegistration);
 router.post('/login', loginValidation, login);
 router.get('/me', protect, getMe);
 router.post('/forgot-password', forgotPassword);
 router.post('/verify-otp', verifyOtp);
 router.post('/reset-password', resetPassword);
 
+const requireGoogleOAuth = (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(503).json({ success: false, message: 'Google Sign In is not configured.' });
+  }
+  return next();
+};
+
 // Google OAuth
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+router.get('/google', requireGoogleOAuth, passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
 
 router.get(
   '/google/callback',
+  requireGoogleOAuth,
   passport.authenticate('google', { failureRedirect: `${process.env.CLIENT_URL}/login`, session: false }),
   (req, res) => {
     const token = jwt.sign(

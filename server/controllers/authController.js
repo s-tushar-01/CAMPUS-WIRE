@@ -22,6 +22,15 @@ const sendEmail = async ({ to, subject, html }) => {
   await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, html });
 };
 
+const createOtp = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  return {
+    otp,
+    hashedOTP: crypto.createHash('sha256').update(otp).digest('hex'),
+    otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+  };
+};
+
 // @route   POST /api/auth/register
 // @access  Public
 const register = async (req, res, next) => {
@@ -49,10 +58,71 @@ const register = async (req, res, next) => {
       }
     }
 
-    const user = await User.create({ name, email, username: normalizedUsername, password, role: 'participant' });
+    const { otp, hashedOTP, otpExpiry } = createOtp();
+    const user = await User.create({
+      name,
+      email,
+      username: normalizedUsername,
+      password,
+      role: 'participant',
+      hashedOTP,
+      otpExpiry,
+    });
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+        <h2 style="color: #6366f1;">Verify your CampusWire account</h2>
+        <p>Use this OTP to verify your email address:</p>
+        <h1 style="letter-spacing: 8px; color: #6366f1; font-size: 36px;">${otp}</h1>
+        <p>This OTP is valid for <strong>10 minutes</strong>.</p>
+        <p>If you did not create this account, please ignore this email.</p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your CampusWire account',
+      html,
+    });
+
+    res.status(201).json({
+      success: true,
+      requiresVerification: true,
+      email: user.email,
+      message: 'Account created. Check your email for the verification OTP.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @route   POST /api/auth/verify-registration
+// @access  Public
+const verifyRegistration = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user || !user.hashedOTP || !user.otpExpiry) {
+      return res.status(400).json({ success: false, message: 'OTP not found. Please register again or request a new code.' });
+    }
+
+    if (user.otpExpiry < new Date()) {
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please register again.' });
+    }
+
+    const hashedInput = crypto.createHash('sha256').update(otp).digest('hex');
+    if (hashedInput !== user.hashedOTP) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    user.isEmailVerified = true;
+    user.hashedOTP = undefined;
+    user.otpExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
 
     const token = signToken(user._id, user.role);
-    res.status(201).json({
+    res.json({
       success: true,
       token,
       user: {
@@ -95,6 +165,10 @@ const login = async (req, res, next) => {
         success: false,
         message: 'This account uses Google Sign In. Please sign in with Google.',
       });
+    }
+
+    if (user.isEmailVerified === false) {
+      return res.status(401).json({ success: false, message: 'Please verify your email before signing in.' });
     }
 
     const isMatch = await user.comparePassword(password);
@@ -146,9 +220,7 @@ const forgotPassword = async (req, res, next) => {
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const { otp, hashedOTP, otpExpiry } = createOtp();
 
     user.hashedOTP = hashedOTP;
     user.otpExpiry = otpExpiry;
@@ -253,4 +325,4 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe, forgotPassword, verifyOtp, resetPassword };
+module.exports = { register, verifyRegistration, login, getMe, forgotPassword, verifyOtp, resetPassword };

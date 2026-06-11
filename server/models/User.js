@@ -51,6 +51,10 @@ const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
   profilePic: {
     url: {
       type: String,
@@ -91,7 +95,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
-  // OTP for forgot password
+  // OTP for forgot password and email verification
   hashedOTP: { type: String },
   otpExpiry: { type: Date },
   createdAt: {

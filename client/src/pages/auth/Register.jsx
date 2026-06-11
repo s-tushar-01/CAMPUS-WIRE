@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import { FieldError, Input, Select } from '../../components/ui/Form';
 import { unwrapApi } from '../../lib/utils';
@@ -10,14 +9,14 @@ import AuthShell from './AuthShell';
 
 export default function Register() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const { register, getValues, setValue, trigger, formState: { errors, isSubmitting } } = useForm();
 
   const submit = async ({ roleLabel, ...values }) => {
     try {
       const { data } = await api.post('/api/auth/register', values);
-      login(data.token, data.user);
-      navigate('/');
+      sessionStorage.setItem('signupEmail', data.email || values.email);
+      toast.success(data.message || 'Check your email for the verification code');
+      navigate('/verify-signup');
     } catch (error) {
       toast.error(unwrapApi(error));
     }
